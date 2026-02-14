@@ -1,5 +1,8 @@
 # Forward Euler Method in Lean 4
 
+[![Lean Action CI](https://github.com/Vilin97/forward_euler/actions/workflows/lean_action_ci.yml/badge.svg)](https://github.com/Vilin97/forward_euler/actions/workflows/lean_action_ci.yml)
+[![Compile blueprint](https://github.com/Vilin97/forward_euler/actions/workflows/blueprint.yml/badge.svg)](https://github.com/Vilin97/forward_euler/actions/workflows/blueprint.yml)
+
 A formal proof of convergence of the [forward Euler method](https://en.wikipedia.org/wiki/Euler_method) for ordinary differential equations.
 
 Given an ODE $y'(t) = v(t, y(t))$, $y(t_0) = y_0$, where $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$, we define the Euler approximation and prove that it converges to the true solution as the step size $h \to 0^+$.
