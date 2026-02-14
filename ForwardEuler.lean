@@ -1,1 +1,1 @@
-import ForwardEuler.«aristotle-1»
+import ForwardEuler.aristotle
