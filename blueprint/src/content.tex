@@ -5,3 +5,173 @@
 % If you want to split the blueprint content into several files then
 % the current file can be a simple sequence of \input. Otherwise It
 % can start with a \section or \chapter for instance.
+
+\chapter{The Forward Euler Method}
+
+We implement the explicit Euler method for ODEs and prove its convergence.
+Consider the initial value problem $y'(t) = v(t, y(t))$, $y(t_0) = y_0$, where
+$v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
+
+\section{Definitions}
+
+\begin{definition}[Euler step]
+  \label{def:eulerStep}
+  \lean{eulerStep}
+  \leanok
+  Given a vector field $v$, step size $h$, time $t$, and current value $y$, the
+  \emph{Euler step} is
+  \[
+    \mathrm{eulerStep}(v, h, t, y) = y + h \cdot v(t, y).
+  \]
+\end{definition}
+
+\begin{definition}[Euler points]
+  \label{def:eulerPoint}
+  \lean{eulerPoint}
+  \leanok
+  \uses{def:eulerStep}
+  The sequence of \emph{Euler points} is defined recursively by
+  \[
+    y_0 = y_0, \qquad y_{n+1} = \mathrm{eulerStep}(v, h, t_0 + nh, y_n).
+  \]
+\end{definition}
+
+\begin{definition}[Euler path]
+  \label{def:eulerPath}
+  \lean{eulerPath}
+  \leanok
+  \uses{def:eulerPoint}
+  The \emph{Euler path} is the piecewise linear interpolation of the Euler points.
+  For $t \in [t_n, t_{n+1})$ where $n = \lfloor (t - t_0)/h \rfloor$,
+  \[
+    \mathrm{eulerPath}(t) = y_n + (t - t_n) \cdot v(t_n, y_n).
+  \]
+\end{definition}
+
+\begin{definition}[Euler derivative]
+  \label{def:eulerDeriv}
+  \lean{eulerDeriv}
+  \leanok
+  \uses{def:eulerPoint}
+  The \emph{Euler derivative} is the piecewise constant right derivative of
+  the Euler path. For $t \in [t_n, t_{n+1})$,
+  \[
+    \mathrm{eulerDeriv}(t) = v(t_n, y_n).
+  \]
+\end{definition}
+
+\section{Properties of the Euler path}
+
+\begin{theorem}[Grid point values]
+  \label{thm:eulerPath_grid_point}
+  \lean{eulerPath_grid_point}
+  \leanok
+  \uses{def:eulerPath, def:eulerPoint}
+  The Euler path coincides with the Euler points at the grid points:
+  \[
+    \mathrm{eulerPath}(t_0 + nh) = y_n.
+  \]
+\end{theorem}
+
+\begin{theorem}[Continuity]
+  \label{thm:eulerPath_continuous}
+  \lean{eulerPath_continuous}
+  \leanok
+  \uses{def:eulerPath, thm:eulerPath_grid_point}
+  The Euler path is continuous on $[t_0, \infty)$.
+\end{theorem}
+
+\begin{theorem}[Right derivative]
+  \label{thm:eulerPath_hasDerivWithinAt}
+  \lean{eulerPath_hasDerivWithinAt}
+  \uses{def:eulerPath, def:eulerDeriv, thm:eulerPath_grid_point}
+  For $t \geq t_0$, the Euler path has right derivative
+  $\mathrm{eulerDeriv}(t)$ at $t$.
+\end{theorem}
+
+\begin{theorem}[Euler path on intervals]
+  \label{thm:eulerPath_eq_on_Ico}
+  \lean{eulerPath_eq_on_Ico}
+  \leanok
+  \uses{def:eulerPath, def:eulerPoint}
+  For $t \in [t_n, t_{n+1})$,
+  \[
+    \mathrm{eulerPath}(t) = y_n + (t - t_n) \cdot v(t_n, y_n).
+  \]
+\end{theorem}
+
+\begin{theorem}[Euler derivative on intervals]
+  \label{thm:eulerDeriv_eq_on_Ico}
+  \lean{eulerDeriv_eq_on_Ico}
+  \leanok
+  \uses{def:eulerDeriv, def:eulerPoint}
+  For $t \in [t_n, t_{n+1})$,
+  \[
+    \mathrm{eulerDeriv}(t) = v(t_n, y_n).
+  \]
+\end{theorem}
+
+\section{Error analysis}
+
+\begin{lemma}[Point--path distance]
+  \label{lem:euler_dist_point_path}
+  \lean{euler_dist_point_path}
+  \leanok
+  \uses{def:eulerPoint, def:eulerPath, thm:eulerPath_eq_on_Ico}
+  Suppose $\|v(t, y)\| \leq M$ for all $t, y$. For $t \in [t_n, t_{n+1})$,
+  \[
+    \mathrm{dist}(y_n, \mathrm{eulerPath}(t)) \leq hM.
+  \]
+\end{lemma}
+
+\begin{lemma}[Local derivative bound]
+  \label{lem:euler_derivative_bound}
+  \lean{euler_derivative_bound}
+  \leanok
+  \uses{def:eulerDeriv, def:eulerPath, thm:eulerDeriv_eq_on_Ico, lem:euler_dist_point_path}
+  Suppose $v$ is $K$-Lipschitz in space, $L$-Lipschitz in time, and
+  $\|v\| \leq M$. For $t \in [t_n, t_{n+1})$,
+  \[
+    \mathrm{dist}(\mathrm{eulerDeriv}(t),\; v(t, \mathrm{eulerPath}(t)))
+    \leq h(L + KM).
+  \]
+\end{lemma}
+
+\begin{lemma}[Global derivative bound]
+  \label{lem:euler_derivative_global_bound}
+  \lean{euler_derivative_global_bound}
+  \leanok
+  \uses{lem:euler_derivative_bound}
+  Under the same hypotheses, for all $t \geq t_0$,
+  \[
+    \mathrm{dist}(\mathrm{eulerDeriv}(t),\; v(t, \mathrm{eulerPath}(t)))
+    \leq h(L + KM).
+  \]
+\end{lemma}
+
+\begin{theorem}[Error bound]
+  \label{thm:euler_error_bound}
+  \lean{euler_error_bound}
+  \leanok
+  \uses{thm:eulerPath_continuous, thm:eulerPath_hasDerivWithinAt, lem:euler_derivative_global_bound, thm:eulerPath_grid_point}
+  Let $\mathrm{sol}$ be the true solution of the ODE on $[t_0, T]$.
+  Under the Lipschitz and boundedness hypotheses on $v$,
+  \[
+    \mathrm{dist}(\mathrm{eulerPath}(t), \mathrm{sol}(t))
+    \leq \mathrm{gronwallBound}(0, K, h(L + KM), t - t_0)
+  \]
+  for all $t \in [t_0, T]$.
+\end{theorem}
+
+\begin{theorem}[Convergence]
+  \label{thm:euler_convergence}
+  \lean{euler_convergence}
+  \leanok
+  \uses{thm:euler_error_bound}
+  The Euler method converges to the true solution as the step size $h \to 0^+$:
+  for all $t \in [t_0, T]$,
+  \[
+    \mathrm{eulerPath}(v, h, t_0, y_0, t) \to \mathrm{sol}(t)
+    \quad \text{as } h \to 0^+.
+  \]
+\end{theorem}
