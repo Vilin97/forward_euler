@@ -114,16 +114,16 @@ theorem eulerPath_continuous {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
         have h_cont_at : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + n * h) (Set.Ioi (t0 + n * h))) (nhds (eulerPoint v h t0 y0 n + (t0 + n * h - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n))) := by
           exact tendsto_nhdsWithin_of_tendsto_nhds ( Continuous.tendsto' ( by continuity ) _ _ ( by simp +decide ) );
         convert h_cont_at.congr' _ using 2;
-        · simp +decide [ eulerPath_grid_point ];
-          exact?;
+        · simp +decide;
+          exact eulerPath_grid_point v h h_pos t0 y0 n;
         · filter_upwards [ Ioo_mem_nhdsGT_of_mem ⟨ le_rfl, show t0 + n * h < t0 + ( n + 1 ) * h by linarith ⟩ ] with t ht using Eq.symm ( h_eq t ht );
       have h_cont_at : Filter.Tendsto (fun t => eulerPath v h t0 y0 t) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPath v h t0 y0 (t0 + (n + 1) * h))) := by
         have h_cont_at : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPath v h t0 y0 (t0 + (n + 1) * h))) := by
           have h_cont_at : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPoint v h t0 y0 n + ((t0 + (n + 1) * h) - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n))) := by
             exact tendsto_const_nhds.add ( Filter.Tendsto.smul ( continuousWithinAt_id.sub continuousWithinAt_const ) tendsto_const_nhds );
-          convert h_cont_at using 2 ; ring!;
-          convert eulerPath_grid_point v h h_pos t0 y0 ( n + 1 ) using 1 ; ring!;
-          push_cast; ring;
+          convert h_cont_at using 2 ; ring_nf!;
+          convert eulerPath_grid_point v h h_pos t0 y0 ( n + 1 ) using 1 ; ring_nf!;
+          push_cast; ring_nf;
         refine' h_cont_at.congr' _;
         filter_upwards [ Ioo_mem_nhdsLT ( show t0 + n * h < t0 + ( n + 1 ) * h by linarith ) ] with t ht using Eq.symm ( h_eq t ht );
       intro t ht;
@@ -153,7 +153,7 @@ theorem eulerPath_continuous {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
           exact h_cont_at.continuousWithinAt ( Set.right_mem_Icc.mpr ( by nlinarith ) );
       have h_cont_at : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h)) (t0 + n * h) := by
         rw [ Metric.continuousWithinAt_iff ] at *;
-        intro ε hε; rcases h_cont_at ε hε with ⟨ δ₁, hδ₁, H₁ ⟩ ; rcases ‹∀ ε > 0, ∃ δ > 0, ∀ ⦃x : ℝ⦄, x ∈ Set.Icc ( t0 + ( n : ℝ ) * h ) ( t0 + ( n + 1 ) * h ) → Dist.dist x ( t0 + ( n : ℝ ) * h ) < δ → Dist.dist ( eulerPath v h t0 y0 x ) ( eulerPath v h t0 y0 ( t0 + ( n : ℝ ) * h ) ) < ε› ε hε with ⟨ δ₂, hδ₂, H₂ ⟩ ; refine' ⟨ Min.min δ₁ δ₂, lt_min hδ₁ hδ₂, fun x hx₁ hx₂ => _ ⟩ ; cases le_total x ( t0 + ( n : ℝ ) * h ) <;> simp_all +decide [ mul_comm h ] ;
+        intro ε hε; rcases h_cont_at ε hε with ⟨ δ₁, hδ₁, H₁ ⟩ ; rcases ‹∀ ε > 0, ∃ δ > 0, ∀ ⦃x : ℝ⦄, x ∈ Set.Icc ( t0 + ( n : ℝ ) * h ) ( t0 + ( n + 1 ) * h ) → Dist.dist x ( t0 + ( n : ℝ ) * h ) < δ → Dist.dist ( eulerPath v h t0 y0 x ) ( eulerPath v h t0 y0 ( t0 + ( n : ℝ ) * h ) ) < ε› ε hε with ⟨ δ₂, hδ₂, H₂ ⟩ ; refine' ⟨ Min.min δ₁ δ₂, lt_min hδ₁ hδ₂, fun x hx₁ hx₂ => _ ⟩ ; cases le_total x ( t0 + ( n : ℝ ) * h ) <;> simp_all +decide ;
       have h_cont_at : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h) ∩ Set.Ici t0) (t0 + n * h) := by
         exact h_cont_at.mono ( Set.inter_subset_left );
       refine' h_cont_at.mono_of_mem_nhdsWithin _;
@@ -183,7 +183,7 @@ theorem eulerPath_hasDerivWithinAt {E : Type*} [NormedAddCommGroup E] [NormedSpa
       any_goals tauto;
       rw [ hasDerivWithinAt_iff_tendsto ];
       simp +decide [ ← sub_smul, eulerDeriv ];
-    exact?
+    exact hasDerivWithinAt_Ioi_iff_Ici.mp (h_right_deriv t ht)
 
 /-
 On the interval [t_n, t_{n+1}), the Euler path is given by the affine function starting at y_n with slope v(t_n, y_n).
@@ -273,7 +273,7 @@ theorem euler_derivative_global_bound {E : Type*} [NormedAddCommGroup E] [Normed
 Error bound for the Euler method using Gronwall's inequality.
 -/
 theorem euler_error_bound {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (T : ℝ) (ht0 : t0 ≤ T)
+  (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (T : ℝ)
   (K L : NNReal) (M : ℝ)
   (hv : ∀ t, LipschitzWith K (v t))
   (hv_t : ∀ y, LipschitzWith L (fun t => v t y))
@@ -298,7 +298,7 @@ theorem euler_error_bound {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     · exact sol_cont;
     · exact sol_deriv;
     · simp +decide [ dist_self ];
-    · simp +decide [ sol_init, eulerPath_grid_point ];
+    · simp +decide [ sol_init ];
       convert eulerPath_grid_point v h h_pos t0 y0 0;
       norm_num;
     · rw [ add_zero ]
@@ -307,7 +307,7 @@ theorem euler_error_bound {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 Convergence of the Euler method to the true solution as the time step goes to zero.
 -/
 theorem euler_convergence {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  (v : ℝ → E → E) (t0 : ℝ) (y0 : E) (T : ℝ) (ht0 : t0 ≤ T)
+  (v : ℝ → E → E) (t0 : ℝ) (y0 : E) (T : ℝ)
   (K L : NNReal) (M : ℝ)
   (hv : ∀ t, LipschitzWith K (v t))
   (hv_t : ∀ y, LipschitzWith L (fun t => v t y))
@@ -320,7 +320,9 @@ theorem euler_convergence {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     intro t ht;
     -- By the error bound, we have that the distance between the Euler path and the solution is bounded by gronwallBound 0 K (h * (L + K * M)) (t - t0).
     have h_error_bound : ∀ h > 0, dist (eulerPath v h t0 y0 t) (sol t) ≤ gronwallBound 0 K (h * (L + K * M)) (t - t0) := by
-      exact?;
+      exact fun h a ↦
+        euler_error_bound v h a t0 y0 T K L M hv hv_t v_bound sol sol_cont sol_deriv sol_init t
+          ht;
     -- Since $\epsilon \mapsto \text{gronwallBound } 0\ K\ \epsilon\ (t - t_0)$ is continuous at 0, and takes value 0 at 0, $g(h) \to 0$.
     have h_gronwall_zero : Filter.Tendsto (fun h => gronwallBound 0 K (h * (L + K * M)) (t - t0)) (nhdsWithin 0 (Set.Ioi 0)) (nhds 0) := by
       have h_gronwall_zero : Continuous (fun ε : ℝ => gronwallBound 0 (K : ℝ) ε (t - t0)) := by
