@@ -2,6 +2,7 @@ name = "forward_euler"
 version = "0.1.0"
 keywords = ["math"]
 defaultTargets = ["ForwardEuler"]
+lintDriver = "batteries/runLinter"
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
