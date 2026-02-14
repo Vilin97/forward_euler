@@ -51,20 +51,20 @@ set_option autoImplicit false
 
 noncomputable section
 
-/-
+/--
 The Euler step for an ODE y' = v(t, y) with step size h is y_{n+1} = y_n + h * v(t_n, y_n).
 -/
 def eulerStep {E : Type*} [AddCommGroup E] [Module ℝ E] (v : ℝ → E → E) (h : ℝ) (t : ℝ) (y : E) : E :=
   y + h • v t y
 
-/-
+/--
 The n-th point in the Euler method approximation with step size h.
 -/
 def eulerPoint {E : Type*} [AddCommGroup E] [Module ℝ E] (v : ℝ → E → E) (h : ℝ) (t0 : ℝ) (y0 : E) : ℕ → E
 | 0 => y0
 | n + 1 => eulerStep v h (t0 + n * h) (eulerPoint v h t0 y0 n)
 
-/-
+/--
 The piecewise linear path interpolating the Euler method points.
 -/
 noncomputable def eulerPath {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -83,7 +83,7 @@ theorem eulerPath_grid_point {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
     unfold eulerPath;
     norm_num [ add_sub_cancel_left, h_pos.ne' ]
 
-/-
+/--
 The derivative of the Euler path (defined as the right derivative everywhere).
 -/
 noncomputable def eulerDeriv {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
