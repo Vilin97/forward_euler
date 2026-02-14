@@ -33,8 +33,6 @@ Theorems:
 
 -- import Mathlib
 import Mathlib.Analysis.ODE.Gronwall
-import Mathlib.Data.Real.StarOrdered
-import Mathlib.Topology.GDelta.MetrizableSpace
 
 set_option linter.mathlibStandardSet false
 
