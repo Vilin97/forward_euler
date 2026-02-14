@@ -42,11 +42,6 @@ open scoped Nat
 open scoped Classical
 open scoped Pointwise
 
-set_option maxHeartbeats 0
-set_option maxRecDepth 4000
-set_option synthInstance.maxHeartbeats 20000
-set_option synthInstance.maxSize 128
-
 set_option relaxedAutoImplicit false
 set_option autoImplicit false
 
@@ -97,6 +92,7 @@ noncomputable def eulerDeriv {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
 /-
 The Euler path is continuous on [t0, ∞).
 -/
+set_option maxHeartbeats 250000 in
 theorem eulerPath_continuous {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) :
   ContinuousOn (eulerPath v h t0 y0) (Set.Ici t0) := by
@@ -152,9 +148,17 @@ theorem eulerPath_continuous {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
         · have h_cont_at : ContinuousOn (fun t => eulerPath v h t0 y0 t) (Set.Icc (t0 + (n - 1) * h) (t0 + n * h)) := by
             convert ‹∀ n : ℕ, ContinuousOn ( fun t => eulerPath v h t0 y0 t ) ( Set.Icc ( t0 + n * h ) ( t0 + ( n + 1 ) * h ) ) › ( n - 1 ) using 1 ; cases n <;> aesop;
           exact h_cont_at.continuousWithinAt ( Set.right_mem_Icc.mpr ( by nlinarith ) );
+      have h_left := ‹ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + n * h)) (t0 + n * h)›
+      have h_right := ‹ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) (t0 + n * h)›
       have h_cont_at : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h)) (t0 + n * h) := by
-        rw [ Metric.continuousWithinAt_iff ] at *;
-        intro ε hε; rcases h_cont_at ε hε with ⟨ δ₁, hδ₁, H₁ ⟩ ; rcases ‹∀ ε > 0, ∃ δ > 0, ∀ ⦃x : ℝ⦄, x ∈ Set.Icc ( t0 + ( n : ℝ ) * h ) ( t0 + ( n + 1 ) * h ) → Dist.dist x ( t0 + ( n : ℝ ) * h ) < δ → Dist.dist ( eulerPath v h t0 y0 x ) ( eulerPath v h t0 y0 ( t0 + ( n : ℝ ) * h ) ) < ε› ε hε with ⟨ δ₂, hδ₂, H₂ ⟩ ; refine' ⟨ Min.min δ₁ δ₂, lt_min hδ₁ hδ₂, fun x hx₁ hx₂ => _ ⟩ ; cases le_total x ( t0 + ( n : ℝ ) * h ) <;> simp_all +decide ;
+        refine Metric.continuousWithinAt_iff.mpr fun ε hε => ?_
+        obtain ⟨δ₁, hδ₁, H₁⟩ := Metric.continuousWithinAt_iff.mp h_left ε hε
+        obtain ⟨δ₂, hδ₂, H₂⟩ := Metric.continuousWithinAt_iff.mp h_right ε hε
+        use Min.min δ₁ δ₂, lt_min hδ₁ hδ₂
+        intro x hx₁ hx₂
+        by_cases hcase : x ≤ t0 + n * h
+        · exact H₁ ⟨hx₁.1, hcase⟩ (lt_of_lt_of_le hx₂ (min_le_left _ _))
+        · exact H₂ ⟨le_of_lt (not_le.mp hcase), hx₁.2⟩ (lt_of_lt_of_le hx₂ (min_le_right _ _))
       have h_cont_at : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h) ∩ Set.Ici t0) (t0 + n * h) := by
         exact h_cont_at.mono ( Set.inter_subset_left );
       refine' h_cont_at.mono_of_mem_nhdsWithin _;
