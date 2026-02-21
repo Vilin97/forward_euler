@@ -76,8 +76,7 @@ The Euler path coincides with the Euler points at the grid points.
 theorem eulerPath_grid_point {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (n : ℕ) :
   eulerPath v h t0 y0 (t0 + n * h) = eulerPoint v h t0 y0 n := by
-    unfold eulerPath;
-    norm_num [ add_sub_cancel_left, h_pos.ne' ]
+    unfold eulerPath; norm_num [add_sub_cancel_left, h_pos.ne']
 
 /--
 The derivative of the Euler path (defined as the right derivative everywhere).
@@ -95,37 +94,35 @@ The Euler path is continuous on each grid interval [t₀ + n*h, t₀ + (n+1)*h].
 private theorem eulerPath_continuousOn_Icc {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (n : ℕ) :
   ContinuousOn (eulerPath v h t0 y0) (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) := by
-    have h_affine_cont : ContinuousOn (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) := by
-      fun_prop
+    have h_affine_cont : ContinuousOn (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) := by fun_prop
     have h_eq : ∀ t ∈ Set.Ioo (t0 + n * h) (t0 + (n + 1) * h), eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-      intro t ht
-      simp [eulerPath];
-      rw [ show ⌊ ( t - t0 ) / h⌋₊ = n by exact Nat.floor_eq_iff ( div_nonneg ( by nlinarith [ ht.1, ht.2 ] ) h_pos.le ) |>.2 ⟨ by nlinarith [ ht.1, ht.2, mul_div_cancel₀ ( t - t0 ) h_pos.ne' ], by nlinarith [ ht.1, ht.2, mul_div_cancel₀ ( t - t0 ) h_pos.ne' ] ⟩ ];
+      intro t ht; simp [eulerPath]
+      rw [show ⌊(t - t0) / h⌋₊ = n by exact (Nat.floor_eq_iff (div_nonneg (by nlinarith [ht.1, ht.2]) h_pos.le)).2 ⟨by nlinarith [ht.1, ht.2, mul_div_cancel₀ (t - t0) h_pos.ne'], by nlinarith [ht.1, ht.2, mul_div_cancel₀ (t - t0) h_pos.ne']⟩]
     have h_cont_ioo : ContinuousOn (fun t => eulerPath v h t0 y0 t) (Set.Ioo (t0 + n * h) (t0 + (n + 1) * h)) :=
-      ContinuousOn.congr ( h_affine_cont |> ContinuousOn.mono <| Set.Ioo_subset_Icc_self ) h_eq
+      (h_affine_cont.mono Set.Ioo_subset_Icc_self).congr h_eq
     have h_tendsto_right : Filter.Tendsto (fun t => eulerPath v h t0 y0 t) (nhdsWithin (t0 + n * h) (Set.Ioi (t0 + n * h))) (nhds (eulerPath v h t0 y0 (t0 + n * h))) := by
-      have : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + n * h) (Set.Ioi (t0 + n * h))) (nhds (eulerPoint v h t0 y0 n + (t0 + n * h - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n))) := by
-        exact tendsto_nhdsWithin_of_tendsto_nhds ( Continuous.tendsto' ( by continuity ) _ _ ( by simp +decide ) );
-      convert this.congr' _ using 2;
-      · simp +decide;
-        exact eulerPath_grid_point v h h_pos t0 y0 n;
-      · filter_upwards [ Ioo_mem_nhdsGT_of_mem ⟨ le_rfl, show t0 + n * h < t0 + ( n + 1 ) * h by linarith ⟩ ] with t ht using Eq.symm ( h_eq t ht );
+      have : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + n * h) (Set.Ioi (t0 + n * h))) (nhds (eulerPoint v h t0 y0 n + (t0 + n * h - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n))) :=
+        tendsto_nhdsWithin_of_tendsto_nhds (Continuous.tendsto' (by continuity) _ _ (by simp +decide))
+      convert this.congr' _ using 2
+      · simp +decide; exact eulerPath_grid_point v h h_pos t0 y0 n
+      · filter_upwards [Ioo_mem_nhdsGT_of_mem ⟨le_rfl, show t0 + n * h < t0 + (n + 1) * h by linarith⟩] with t ht using (h_eq t ht).symm
     have h_tendsto_left : Filter.Tendsto (fun t => eulerPath v h t0 y0 t) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPath v h t0 y0 (t0 + (n + 1) * h))) := by
       have : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPath v h t0 y0 (t0 + (n + 1) * h))) := by
-        have : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPoint v h t0 y0 n + ((t0 + (n + 1) * h) - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n))) := by
-          exact tendsto_const_nhds.add ( Filter.Tendsto.smul ( continuousWithinAt_id.sub continuousWithinAt_const ) tendsto_const_nhds );
-        convert this using 2 ; ring_nf!;
-        convert eulerPath_grid_point v h h_pos t0 y0 ( n + 1 ) using 1 ; ring_nf!;
-        push_cast; ring_nf;
-      refine' this.congr' _;
-      filter_upwards [ Ioo_mem_nhdsLT ( show t0 + n * h < t0 + ( n + 1 ) * h by linarith ) ] with t ht using Eq.symm ( h_eq t ht );
-    intro t ht;
-    cases eq_or_lt_of_le ht.1 <;> cases eq_or_lt_of_le ht.2 <;> simp_all +decide [ ContinuousWithinAt ];
-    · rw [ Metric.tendsto_nhdsWithin_nhds ] at *;
-      intro ε hε; rcases ‹∀ ε > 0, ∃ δ > 0, ∀ ⦃x : ℝ⦄, x ∈ Set.Ioi t → Dist.dist x t < δ → Dist.dist ( eulerPath v h t0 y0 x ) ( eulerPath v h t0 y0 t ) < ε› ε hε with ⟨ δ, hδ, H ⟩ ; use δ, hδ; intro x hx₁ hx₂; cases lt_or_eq_of_le hx₁.out <;> aesop;
-    · rw [ Metric.tendsto_nhdsWithin_nhds ] at *;
-      intro ε ε_pos; rcases h_tendsto_left ε ε_pos with ⟨ δ, δ_pos, H ⟩ ; exact ⟨ δ, δ_pos, fun x hx₁ hx₂ => if hx₃ : x = t0 + ( n + 1 ) * h then by simpa [ hx₃ ] else H ( lt_of_le_of_ne hx₁ hx₃ ) hx₂ ⟩ ;
-    · convert h_cont_ioo.continuousAt ( Ioo_mem_nhds ‹_› ‹_› ) |> fun h => h.mono_left inf_le_left using 1 ; aesop;
+        have : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPoint v h t0 y0 n + ((t0 + (n + 1) * h) - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n))) :=
+          tendsto_const_nhds.add (Filter.Tendsto.smul (continuousWithinAt_id.sub continuousWithinAt_const) tendsto_const_nhds)
+        convert this using 2; ring_nf!
+        convert eulerPath_grid_point v h h_pos t0 y0 (n + 1) using 1; ring_nf!; push_cast; ring_nf
+      refine' this.congr' _
+      filter_upwards [Ioo_mem_nhdsLT (show t0 + n * h < t0 + (n + 1) * h by linarith)] with t ht using (h_eq t ht).symm
+    intro t ht
+    cases eq_or_lt_of_le ht.1 <;> cases eq_or_lt_of_le ht.2 <;> simp_all +decide [ContinuousWithinAt]
+    · rw [Metric.tendsto_nhdsWithin_nhds] at *
+      intro ε hε; rcases ‹∀ ε > 0, ∃ δ > 0, ∀ ⦃x : ℝ⦄, x ∈ Set.Ioi t → Dist.dist x t < δ → Dist.dist (eulerPath v h t0 y0 x) (eulerPath v h t0 y0 t) < ε› ε hε with ⟨δ, hδ, H⟩
+      exact ⟨δ, hδ, fun x hx₁ hx₂ => by cases lt_or_eq_of_le hx₁.out <;> aesop⟩
+    · rw [Metric.tendsto_nhdsWithin_nhds] at *
+      intro ε ε_pos; rcases h_tendsto_left ε ε_pos with ⟨δ, δ_pos, H⟩
+      exact ⟨δ, δ_pos, fun x hx₁ hx₂ => if hx₃ : x = t0 + (n + 1) * h then by simpa [hx₃] else H (lt_of_le_of_ne hx₁ hx₃) hx₂⟩
+    · convert h_cont_ioo.continuousAt (Ioo_mem_nhds ‹_› ‹_›) |> fun h => h.mono_left inf_le_left using 1; aesop
 
 /-
 At a grid point t₀ + n*h, the Euler path is continuous within [t₀, ∞).
@@ -137,31 +134,28 @@ private theorem eulerPath_continuousWithinAt_gridpoint {E : Type*} [NormedAddCom
       (eulerPath_continuousOn_Icc v h h_pos t0 y0 n).continuousWithinAt (Set.left_mem_Icc.mpr (by nlinarith))
     have h_left : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + n * h)) (t0 + n * h) := by
       by_cases hn : n = 0
-      · simp [hn];
-        refine' ContinuousWithinAt.congr _ _ _;
-        use fun t => y0 + ( t - t0 ) • v t0 y0;
-        · exact Continuous.continuousWithinAt ( by continuity );
-        · intro y hy; unfold eulerPath; simp +decide [ Nat.floor_eq_zero.mpr ( show ( y - t0 ) / h < 1 by rw [ div_lt_iff₀ h_pos ] ; linarith [ hy.1, hy.2 ] ) ] ;
-          rfl;
-        · simp +decide [ eulerPath ];
-          rfl;
-      · have : ContinuousOn (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + n * h)) := by
-          convert eulerPath_continuousOn_Icc v h h_pos t0 y0 ( n - 1 ) using 1 ; cases n <;> aesop;
-        exact this.continuousWithinAt ( Set.right_mem_Icc.mpr ( by nlinarith ) );
+      · simp [hn]; refine' ContinuousWithinAt.congr _ _ _
+        use fun t => y0 + (t - t0) • v t0 y0
+        · exact Continuous.continuousWithinAt (by continuity)
+        · intro y hy; unfold eulerPath
+          simp +decide [Nat.floor_eq_zero.mpr (show (y - t0) / h < 1 by rw [div_lt_iff₀ h_pos]; linarith [hy.1, hy.2])]; rfl
+        · simp +decide [eulerPath]; rfl
+      · exact ((eulerPath_continuousOn_Icc v h h_pos t0 y0 (n - 1) |>.mono (by cases n <;> aesop)).continuousWithinAt
+          (Set.right_mem_Icc.mpr (by nlinarith)))
     have h_combined : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h)) (t0 + n * h) := by
       refine Metric.continuousWithinAt_iff.mpr fun ε hε => ?_
       obtain ⟨δ₁, hδ₁, H₁⟩ := Metric.continuousWithinAt_iff.mp h_left ε hε
       obtain ⟨δ₂, hδ₂, H₂⟩ := Metric.continuousWithinAt_iff.mp h_right ε hε
-      use Min.min δ₁ δ₂, lt_min hδ₁ hδ₂
-      intro x hx₁ hx₂
-      by_cases hcase : x ≤ t0 + n * h
-      · exact H₁ ⟨hx₁.1, hcase⟩ (lt_of_lt_of_le hx₂ (min_le_left _ _))
-      · exact H₂ ⟨le_of_lt (not_le.mp hcase), hx₁.2⟩ (lt_of_lt_of_le hx₂ (min_le_right _ _))
-    have h_combined : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h) ∩ Set.Ici t0) (t0 + n * h) :=
-      h_combined.mono ( Set.inter_subset_left )
-    refine' h_combined.mono_of_mem_nhdsWithin _;
-    rw [ mem_nhdsWithin_iff_exists_mem_nhds_inter ];
-    exact ⟨ Set.Icc ( t0 + h * ( n - 1 ) ) ( t0 + h * ( n + 1 ) ), Icc_mem_nhds ( by nlinarith ) ( by nlinarith ), fun x hx => ⟨ ⟨ by linarith [ hx.1.1 ], by linarith [ hx.1.2 ] ⟩, hx.2 ⟩ ⟩
+      exact ⟨min δ₁ δ₂, lt_min hδ₁ hδ₂, fun x hx₁ hx₂ => by
+        by_cases hcase : x ≤ t0 + n * h
+        · exact H₁ ⟨hx₁.1, hcase⟩ (lt_of_lt_of_le hx₂ (min_le_left _ _))
+        · exact H₂ ⟨le_of_lt (not_le.mp hcase), hx₁.2⟩ (lt_of_lt_of_le hx₂ (min_le_right _ _))⟩
+    have : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h) ∩ Set.Ici t0) (t0 + n * h) :=
+      h_combined.mono Set.inter_subset_left
+    refine' this.mono_of_mem_nhdsWithin _
+    rw [mem_nhdsWithin_iff_exists_mem_nhds_inter]
+    exact ⟨Set.Icc (t0 + h * (n - 1)) (t0 + h * (n + 1)), Icc_mem_nhds (by nlinarith) (by nlinarith),
+      fun x hx => ⟨⟨by linarith [hx.1.1], by linarith [hx.1.2]⟩, hx.2⟩⟩
 
 /-
 The Euler path is continuous on [t0, ∞).
@@ -174,9 +168,8 @@ theorem eulerPath_continuous {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
     · obtain ⟨ n, rfl ⟩ := h_cases
       exact eulerPath_continuousWithinAt_gridpoint v h h_pos t0 y0 n
     · obtain ⟨n, hn⟩ : ∃ n : ℕ, t ∈ Set.Ioo (t0 + n * h) (t0 + (n + 1) * h) := by
-        use Nat.floor ((t - t0) / h)
-        exact ⟨ lt_of_le_of_ne ( by nlinarith [ Nat.floor_le ( show 0 ≤ ( t - t0 ) / h by exact div_nonneg ( sub_nonneg.mpr ht ) h_pos.le ), mul_div_cancel₀ ( t - t0 ) h_pos.ne' ] ) fun h => h_cases ⟨ _, h.symm ⟩, by nlinarith [ Nat.lt_floor_add_one ( ( t - t0 ) / h ), mul_div_cancel₀ ( t - t0 ) h_pos.ne' ] ⟩
-      exact ContinuousAt.continuousWithinAt ( (eulerPath_continuousOn_Icc v h h_pos t0 y0 n).continuousAt <| Icc_mem_nhds hn.1 hn.2 )
+        exact ⟨_, lt_of_le_of_ne (by nlinarith [Nat.floor_le (div_nonneg (sub_nonneg.mpr ht) h_pos.le), mul_div_cancel₀ (t - t0) h_pos.ne']) fun h => h_cases ⟨_, h.symm⟩, by nlinarith [Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne']⟩
+      exact (eulerPath_continuousOn_Icc v h h_pos t0 y0 n).continuousAt (Icc_mem_nhds hn.1 hn.2) |>.continuousWithinAt
 
 /-
 The Euler path has the expected right derivative everywhere.
@@ -188,14 +181,13 @@ theorem eulerPath_hasDerivWithinAt {E : Type*} [NormedAddCommGroup E] [NormedSpa
     have h_right_deriv : ∀ t ≥ t0, HasDerivWithinAt (eulerPath v h t0 y0) (eulerDeriv v h t0 y0 t) (Set.Ioi t) t := by
       intro t ht
       have h_right_deriv : ∀ᶠ t' in nhdsWithin t (Set.Ioi t), eulerPath v h t0 y0 t' = eulerPoint v h t0 y0 (Nat.floor ((t - t0) / h)) + (t' - (t0 + Nat.floor ((t - t0) / h) * h)) • v (t0 + Nat.floor ((t - t0) / h) * h) (eulerPoint v h t0 y0 (Nat.floor ((t - t0) / h))) := by
-        refine' eventually_nhdsWithin_iff.mpr _;
-        filter_upwards [ Ioo_mem_nhds ( show t > t0 - h by linarith ) ( show t < t0 + h * ( ⌊ ( t - t0 ) / h⌋₊ + 1 ) by nlinarith [ Nat.lt_floor_add_one ( ( t - t0 ) / h ), mul_div_cancel₀ ( t - t0 ) h_pos.ne' ] ) ] with x hx hx' ; simp_all +decide [ mul_comm h ];
-        rw [ eulerPath ];
-        rw [ show ⌊ ( x - t0 ) / h⌋₊ = ⌊ ( t - t0 ) / h⌋₊ from Nat.floor_eq_iff ( div_nonneg ( by linarith ) h_pos.le ) |>.2 ⟨ by nlinarith [ Nat.floor_le ( show 0 ≤ ( t - t0 ) / h by exact div_nonneg ( by linarith ) h_pos.le ), mul_div_cancel₀ ( t - t0 ) h_pos.ne', mul_div_cancel₀ ( x - t0 ) h_pos.ne' ], by nlinarith [ Nat.lt_floor_add_one ( ( t - t0 ) / h ), mul_div_cancel₀ ( t - t0 ) h_pos.ne', mul_div_cancel₀ ( x - t0 ) h_pos.ne' ] ⟩ ];
-      rw [ Filter.EventuallyEq.hasDerivWithinAt_iff ] at *;
-      any_goals tauto;
-      rw [ hasDerivWithinAt_iff_tendsto ];
-      simp +decide [ ← sub_smul, eulerDeriv ];
+        refine' eventually_nhdsWithin_iff.mpr _
+        filter_upwards [Ioo_mem_nhds (show t > t0 - h by linarith) (show t < t0 + h * (⌊(t - t0) / h⌋₊ + 1) by nlinarith [Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne'])] with x hx hx'; simp_all +decide [mul_comm h];
+        rw [eulerPath];
+        rw [show ⌊(x - t0) / h⌋₊ = ⌊(t - t0) / h⌋₊ from Nat.floor_eq_iff (div_nonneg (by linarith) h_pos.le) |>.2 ⟨by nlinarith [Nat.floor_le (show 0 ≤ (t - t0) / h by exact div_nonneg (by linarith) h_pos.le), mul_div_cancel₀ (t - t0) h_pos.ne', mul_div_cancel₀ (x - t0) h_pos.ne'], by nlinarith [Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne', mul_div_cancel₀ (x - t0) h_pos.ne']⟩];
+      rw [Filter.EventuallyEq.hasDerivWithinAt_iff] at *
+      any_goals tauto
+      rw [hasDerivWithinAt_iff_tendsto]; simp +decide [← sub_smul, eulerDeriv]
     exact hasDerivWithinAt_Ioi_iff_Ici.mp (h_right_deriv t ht)
 
 /-
@@ -205,16 +197,10 @@ theorem eulerPath_eq_on_Ico {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ 
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (n : ℕ)
   (t : ℝ) (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
   eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-    -- By definition of eulerPath, we know that for t in [t_n, t_{n+1}), eulerPath v h t0 y0 t is equal to eulerPoint v h t0 y0 n + (t - t_n) • v(t_n, eulerPoint v h t0 y0 n).
-    have h_eulerPath_def : ∀ t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h), eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-      intro t ht
-      have h_floor : Nat.floor ((t - t0) / h) = n := by
-        rw [ Nat.floor_eq_iff ];
-        · exact ⟨ by rw [ le_div_iff₀ h_pos ] ; linarith [ ht.1 ], by rw [ div_lt_iff₀ h_pos ] ; linarith [ ht.2 ] ⟩;
-        · exact div_nonneg ( by nlinarith [ ht.1 ] ) h_pos.le;
-      -- By definition of eulerPath, we know that for t in [t_n, t_{n+1}), eulerPath v h t0 y0 t is equal to eulerPoint v h t0 y0 n + (t - t_n) • v(t_n, eulerPoint v h t0 y0 n) because the floor of (t - t0)/h is n.
-      simp [eulerPath, h_floor];
-    exact h_eulerPath_def t ht
+    have h_floor : Nat.floor ((t - t0) / h) = n :=
+      (Nat.floor_eq_iff (div_nonneg (by nlinarith [ht.1]) h_pos.le)).2
+        ⟨by rw [le_div_iff₀ h_pos]; linarith [ht.1], by rw [div_lt_iff₀ h_pos]; linarith [ht.2]⟩
+    simp [eulerPath, h_floor]
 
 /-
 On the interval [t_n, t_{n+1}), the Euler derivative is constant and equal to v(t_n, y_n).
@@ -224,9 +210,10 @@ theorem eulerDeriv_eq_on_Ico {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
   (t : ℝ) (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
   eulerDeriv v h t0 y0 t = v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
     -- By definition of Nat.floor, we have Nat.floor ((t - t0) / h) = n since t is in the interval [t0 + n*h, t0 + (n+1)*h).
-    have h_floor : Nat.floor ((t - t0) / h) = n := by
-      exact Nat.floor_eq_iff ( div_nonneg ( by nlinarith [ ht.1 ] ) h_pos.le ) |>.2 ⟨ by rw [ le_div_iff₀ h_pos ] ; linarith [ ht.1 ], by rw [ div_lt_iff₀ h_pos ] ; linarith [ ht.2 ] ⟩;
-    unfold eulerDeriv; aesop;
+    have h_floor : Nat.floor ((t - t0) / h) = n :=
+      (Nat.floor_eq_iff (div_nonneg (by nlinarith [ht.1]) h_pos.le)).2
+        ⟨by rw [le_div_iff₀ h_pos]; linarith [ht.1], by rw [div_lt_iff₀ h_pos]; linarith [ht.2]⟩
+    unfold eulerDeriv; aesop
 
 /-
 The distance between the Euler point and the Euler path on the interval [t_n, t_{n+1}) is bounded by h * M.
@@ -236,12 +223,9 @@ theorem euler_dist_point_path {E : Type*} [NormedAddCommGroup E] [NormedSpace �
   (M : ℝ) (v_bound : ∀ t y, ‖v t y‖ ≤ M)
   (t : ℝ) (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
   dist (eulerPoint v h t0 y0 n) (eulerPath v h t0 y0 t) ≤ h * M := by
-    -- By definition of $eulerPath$, we have $eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)$.
-    have h_eulerPath : eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-      convert eulerPath_eq_on_Ico v h h_pos t0 y0 n t ht using 1;
-    rw [ h_eulerPath, dist_eq_norm ];
-    simp +decide [ norm_smul, abs_of_nonneg ( sub_nonneg.2 ht.1 ) ];
-    exact mul_le_mul ( by nlinarith [ ht.1, ht.2 ] ) ( v_bound _ _ ) ( by positivity ) ( by positivity )
+    rw [eulerPath_eq_on_Ico v h h_pos t0 y0 n t ht, dist_eq_norm]
+    simp +decide [norm_smul, abs_of_nonneg (sub_nonneg.2 ht.1)]
+    exact mul_le_mul (by nlinarith [ht.1, ht.2]) (v_bound _ _) (by positivity) (by positivity)
 
 /-
 Bound on the difference between the Euler derivative and the vector field at the Euler path.
@@ -256,17 +240,21 @@ theorem euler_derivative_bound {E : Type*} [NormedAddCommGroup E] [NormedSpace �
   dist (eulerDeriv v h t0 y0 t) (v t (eulerPath v h t0 y0 t)) ≤ h * (L + K * M) := by
     -- Using the Lipschitz properties and the bounds we established, we can bound the distances.
     have h1 : dist (v (t0 + n * h) (eulerPoint v h t0 y0 n)) (v t (eulerPoint v h t0 y0 n)) ≤ L * (t - (t0 + n * h)) := by
-      have := hv_t ( eulerPoint v h t0 y0 n );
-      simpa only [ dist_eq_norm, norm_sub_rev ] using this.dist_le_mul ( t0 + n * h ) t |> le_trans <| by rw [ dist_eq_norm ] ; rw [ Real.norm_of_nonpos ] <;> linarith [ ht.1, ht.2 ] ;
-    have h2 : dist (v t (eulerPoint v h t0 y0 n)) (v t (eulerPath v h t0 y0 t)) ≤ K * (h * M) := by
-      have h2 : dist (eulerPoint v h t0 y0 n) (eulerPath v h t0 y0 t) ≤ h * M := by
-        convert euler_dist_point_path v h h_pos t0 y0 n M v_bound t ht using 1;
-      exact le_trans ( hv t |> LipschitzWith.dist_le_mul |> fun h => h _ _ ) ( mul_le_mul_of_nonneg_left h2 <| NNReal.coe_nonneg _ );
+      simpa only [dist_eq_norm, norm_sub_rev] using
+        (hv_t (eulerPoint v h t0 y0 n)).dist_le_mul (t0 + n * h) t |> le_trans <|
+        by rw [dist_eq_norm, Real.norm_of_nonpos] <;> linarith [ht.1, ht.2]
+    have h2 : dist (v t (eulerPoint v h t0 y0 n)) (v t (eulerPath v h t0 y0 t)) ≤ K * (h * M) :=
+      le_trans ((hv t).dist_le_mul _ _)
+        (mul_le_mul_of_nonneg_left (euler_dist_point_path v h h_pos t0 y0 n M v_bound t ht) (NNReal.coe_nonneg _))
     -- Using the triangle inequality, we can combine these bounds.
-    have h_combined : dist (eulerDeriv v h t0 y0 t) (v t (eulerPath v h t0 y0 t)) ≤ (L : ℝ) * (t - (t0 + n * h)) + (K : ℝ) * (h * M) := by
-      convert dist_triangle _ _ _ |> le_trans <| add_le_add h1 h2 using 1;
-      rw [ eulerDeriv_eq_on_Ico v h h_pos t0 y0 n t ht ];
-    exact h_combined.trans ( by nlinarith [ ht.1, ht.2, show ( 0 : ℝ ) ≤ L by positivity, show ( 0 : ℝ ) ≤ K * M by exact mul_nonneg ( NNReal.coe_nonneg _ ) ( show ( 0 : ℝ ) ≤ M by exact le_trans ( norm_nonneg _ ) ( v_bound t0 y0 ) ) ] )
+    calc dist (eulerDeriv v h t0 y0 t) (v t (eulerPath v h t0 y0 t))
+        = dist (v (t0 + n * h) (eulerPoint v h t0 y0 n)) (v t (eulerPath v h t0 y0 t)) := by
+          rw [eulerDeriv_eq_on_Ico v h h_pos t0 y0 n t ht]
+      _ ≤ L * (t - (t0 + n * h)) + K * (h * M) := dist_triangle _ _ _ |>.trans (add_le_add h1 h2)
+      _ ≤ h * (L + K * M) := by
+          have : (0 : ℝ) ≤ L := by positivity
+          have : (0 : ℝ) ≤ K * M := mul_nonneg (NNReal.coe_nonneg _) (le_trans (norm_nonneg _) (v_bound t0 y0))
+          nlinarith [ht.1, ht.2]
 
 /-
 Global bound on the difference between the Euler derivative and the vector field.
@@ -279,8 +267,9 @@ theorem euler_derivative_global_bound {E : Type*} [NormedAddCommGroup E] [Normed
   (v_bound : ∀ t y, ‖v t y‖ ≤ M)
   (t : ℝ) (ht : t0 ≤ t) :
   dist (eulerDeriv v h t0 y0 t) (v t (eulerPath v h t0 y0 t)) ≤ h * (L + K * M) := by
-    convert euler_derivative_bound v h h_pos t0 y0 ( Nat.floor ( ( t - t0 ) / h ) ) K L M hv hv_t v_bound t _ using 2;
-    exact ⟨ by nlinarith [ Nat.floor_le ( show 0 ≤ ( t - t0 ) / h by exact div_nonneg ( sub_nonneg.mpr ht ) h_pos.le ), mul_div_cancel₀ ( t - t0 ) h_pos.ne' ], by nlinarith [ Nat.lt_floor_add_one ( ( t - t0 ) / h ), mul_div_cancel₀ ( t - t0 ) h_pos.ne' ] ⟩
+    exact euler_derivative_bound v h h_pos t0 y0 _ K L M hv hv_t v_bound t
+      ⟨by nlinarith [Nat.floor_le (div_nonneg (sub_nonneg.mpr ht) h_pos.le), mul_div_cancel₀ (t - t0) h_pos.ne'],
+       by nlinarith [Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne']⟩
 
 /-
 Error bound for the Euler method using Gronwall's inequality.
@@ -296,25 +285,21 @@ theorem euler_error_bound {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (sol_deriv : ∀ t ∈ Set.Ico t0 T, HasDerivWithinAt sol (v t (sol t)) (Set.Ici t) t)
   (sol_init : sol t0 = y0) :
   ∀ t ∈ Set.Icc t0 T, dist (eulerPath v h t0 y0 t) (sol t) ≤ gronwallBound 0 K (h * (L + K * M)) (t - t0) := by
-    intro t ht;
-    convert dist_le_of_approx_trajectories_ODE hv _ _ _ _ _ _ _ _ _ using 1;
-    any_goals exact ht;
-    rotate_left 1;
-    exact fun t => eulerDeriv v h t0 y0 t;
-    exact fun t => v t ( sol t );
-    exact h * ( L + K * M );
-    exact 0;
-    exact 0;
-    exact ContinuousOn.mono ( eulerPath_continuous v h h_pos t0 y0 ) ( Set.Icc_subset_Ici_self );
-    exact fun t ht => eulerPath_hasDerivWithinAt v h h_pos t0 y0 t ht.1;
-    exact fun t ht => euler_derivative_global_bound v h h_pos t0 y0 K L M hv hv_t v_bound t ht.1;
-    · exact sol_cont;
-    · exact sol_deriv;
-    · simp +decide [ dist_self ];
-    · simp +decide [ sol_init ];
-      convert eulerPath_grid_point v h h_pos t0 y0 0;
-      norm_num;
-    · rw [ add_zero ]
+    intro t ht
+    convert dist_le_of_approx_trajectories_ODE hv _ _ _ _ _ _ _ _ _ using 1
+    any_goals exact ht
+    rotate_left 1
+    exact fun t => eulerDeriv v h t0 y0 t
+    exact fun t => v t (sol t)
+    exact h * (L + K * M); exact 0; exact 0
+    exact (eulerPath_continuous v h h_pos t0 y0).mono Set.Icc_subset_Ici_self
+    exact fun t ht => eulerPath_hasDerivWithinAt v h h_pos t0 y0 t ht.1
+    exact fun t ht => euler_derivative_global_bound v h h_pos t0 y0 K L M hv hv_t v_bound t ht.1
+    · exact sol_cont
+    · exact sol_deriv
+    · simp +decide [dist_self]
+    · simp +decide [sol_init]; convert eulerPath_grid_point v h h_pos t0 y0 0; norm_num
+    · rw [add_zero]
 
 /-
 Convergence of the Euler method to the true solution as the time step goes to zero.
@@ -330,19 +315,12 @@ theorem euler_convergence {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (sol_deriv : ∀ t ∈ Set.Ico t0 T, HasDerivWithinAt sol (v t (sol t)) (Set.Ici t) t)
   (sol_init : sol t0 = y0) :
   ∀ t ∈ Set.Icc t0 T, Filter.Tendsto (fun h => eulerPath v h t0 y0 t) (nhdsWithin 0 (Set.Ioi 0)) (nhds (sol t)) := by
-    intro t ht;
-    -- By the error bound, we have that the distance between the Euler path and the solution is bounded by gronwallBound 0 K (h * (L + K * M)) (t - t0).
-    have h_error_bound : ∀ h > 0, dist (eulerPath v h t0 y0 t) (sol t) ≤ gronwallBound 0 K (h * (L + K * M)) (t - t0) := by
-      exact fun h a ↦
-        euler_error_bound v h a t0 y0 T K L M hv hv_t v_bound sol sol_cont sol_deriv sol_init t
-          ht;
+    intro t ht
     -- Since $\epsilon \mapsto \text{gronwallBound } 0\ K\ \epsilon\ (t - t_0)$ is continuous at 0, and takes value 0 at 0, $g(h) \to 0$.
     have h_gronwall_zero : Filter.Tendsto (fun h => gronwallBound 0 K (h * (L + K * M)) (t - t0)) (nhdsWithin 0 (Set.Ioi 0)) (nhds 0) := by
-      have h_gronwall_zero : Continuous (fun ε : ℝ => gronwallBound 0 (K : ℝ) ε (t - t0)) := by
-        exact gronwallBound_continuous_ε _ _ _;
-      convert h_gronwall_zero.continuousWithinAt.tendsto.comp ( show Filter.Tendsto ( fun h : ℝ => h * ( L + K * M ) ) ( nhdsWithin 0 ( Set.Ioi 0 ) ) ( nhdsWithin 0 ( Set.Ici 0 ) ) from ?_ ) using 2;
-      · exact Eq.symm ( gronwallBound_ε0_δ0 _ _ );
-      · refine' Filter.Tendsto.inf _ _ <;> norm_num;
-        · exact Continuous.tendsto' ( by continuity ) _ _ ( by simp +decide );
-        · exact fun x hx => mul_nonneg hx.le ( add_nonneg ( NNReal.coe_nonneg _ ) ( mul_nonneg ( NNReal.coe_nonneg _ ) ( show 0 ≤ M by exact le_trans ( norm_nonneg _ ) ( v_bound t0 y0 ) ) ) );
-    exact tendsto_iff_dist_tendsto_zero.mpr ( squeeze_zero_norm' ( Filter.eventually_of_mem self_mem_nhdsWithin fun x hx => by simpa using h_error_bound x hx ) h_gronwall_zero )
+      convert (gronwallBound_continuous_ε _ _ _).continuousWithinAt.tendsto.comp (show Filter.Tendsto (fun h : ℝ => h * (L + K * M)) (nhdsWithin 0 (Set.Ioi 0)) (nhdsWithin 0 (Set.Ici 0)) from ?_) using 2
+      · exact (gronwallBound_ε0_δ0 _ _).symm
+      · refine' Filter.Tendsto.inf _ _ <;> norm_num
+        · exact Continuous.tendsto' (by continuity) _ _ (by simp +decide)
+        · exact fun x hx => mul_nonneg hx.le (add_nonneg (NNReal.coe_nonneg _) (mul_nonneg (NNReal.coe_nonneg _) (le_trans (norm_nonneg _) (v_bound t0 y0))))
+    exact tendsto_iff_dist_tendsto_zero.mpr (squeeze_zero_norm' (Filter.eventually_of_mem self_mem_nhdsWithin fun x hx => by simpa using euler_error_bound v x hx t0 y0 T K L M hv hv_t v_bound sol sol_cont sol_deriv sol_init t ht) h_gronwall_zero)
