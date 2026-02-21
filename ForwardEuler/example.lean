@@ -26,13 +26,6 @@ def eulerStep {E : Type*} [AddCommGroup E] [Module ℝ E]
 def v' : ℝ → ℝ → ℝ := fun t y => y
 #eval repr (eulerStep v' 1 0 1)
 
-
-
-
-
-def v : ℚ → ℚ → ℚ := fun t y => y
-#eval repr (eulerStep v 1 0 1)
-
 set_option trace.Meta.synthInstance true
 #eval repr (eulerStep v' 1 0 1)
 
@@ -49,13 +42,3 @@ The n-th point in the Euler method approximation with step size h.
 def eulerPoint {E : Type*} [AddCommGroup E] [Module ℝ E] (v : ℝ → E → E) (h : ℝ) (t0 : ℝ) (y0 : E) : ℕ → E
 | 0 => y0
 | n + 1 => eulerStep v h (t0 + n * h) (eulerPoint v h t0 y0 n)
-
-/--
-The piecewise linear path interpolating the Euler method points.
--/
-noncomputable def eulerPath {E : Type*} [NormedAddCommGroup E] [NormedSpace k E]
-  (v : k → E → E) (h : k) (t0 : k) (y0 : E) (t : k) : E :=
-  let n := Nat.floor ((t - t0) / h)
-  let tn := t0 + n * h
-  let yn := eulerPoint v h t0 y0 n
-  yn + (t - tn) • v tn yn
