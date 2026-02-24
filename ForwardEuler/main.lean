@@ -24,26 +24,25 @@ import Mathlib.Analysis.ODE.Gronwall
 
 set_option linter.mathlibStandardSet false
 
-noncomputable section
-
 /--
 The Euler step for an ODE y' = v(t, y) with step size h is y_{n+1} = y_n + h * v(t_n, y_n).
 -/
-def eulerStep {E : Type*} [AddCommGroup E] [Module ℝ E] (v : ℝ → E → E) (h : ℝ) (t : ℝ) (y : E) : E :=
+def eulerStep {𝕜 : Type*} {E : Type*} [Ring 𝕜] [AddCommGroup E] [Module 𝕜 E] (v : 𝕜 → E → E) (h : 𝕜) (t : 𝕜) (y : E) : E :=
   y + h • v t y
 
 /--
 The n-th point in the Euler method approximation with step size h.
 -/
-def eulerPoint {E : Type*} [AddCommGroup E] [Module ℝ E] (v : ℝ → E → E) (h : ℝ) (t0 : ℝ) (y0 : E) : ℕ → E
+def eulerPoint {𝕜 : Type*} {E : Type*} [Ring 𝕜] [AddCommGroup E] [Module 𝕜 E] (v : 𝕜 → E → E) (h : 𝕜) (t0 : 𝕜) (y0 : E) : ℕ → E
 | 0 => y0
 | n + 1 => eulerStep v h (t0 + n * h) (eulerPoint v h t0 y0 n)
 
 /--
 The piecewise linear path interpolating the Euler method points.
 -/
-noncomputable def eulerPath {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  (v : ℝ → E → E) (h : ℝ) (t0 : ℝ) (y0 : E) (t : ℝ) : E :=
+noncomputable def eulerPath {𝕜 : Type*} {E : Type*} [Field 𝕜] [PartialOrder 𝕜] [FloorSemiring 𝕜]
+    [AddCommGroup E] [Module 𝕜 E]
+  (v : 𝕜 → E → E) (h : 𝕜) (t0 : 𝕜) (y0 : E) (t : 𝕜) : E :=
   let n := Nat.floor ((t - t0) / h)
   let tn := t0 + n * h
   let yn := eulerPoint v h t0 y0 n
@@ -60,8 +59,9 @@ theorem eulerPath_grid_point {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
 /--
 The derivative of the Euler path (defined as the right derivative everywhere).
 -/
-noncomputable def eulerDeriv {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  (v : ℝ → E → E) (h : ℝ) (t0 : ℝ) (y0 : E) (t : ℝ) : E :=
+noncomputable def eulerDeriv {𝕜 : Type*} {E : Type*} [Field 𝕜] [PartialOrder 𝕜] [FloorSemiring 𝕜]
+    [AddCommGroup E] [Module 𝕜 E]
+  (v : 𝕜 → E → E) (h : 𝕜) (t0 : 𝕜) (y0 : E) (t : 𝕜) : E :=
   let n := Nat.floor ((t - t0) / h)
   let tn := t0 + n * h
   let yn := eulerPoint v h t0 y0 n
