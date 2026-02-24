@@ -56,6 +56,12 @@ theorem eulerPath_grid_point {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
   eulerPath v h t0 y0 (t0 + n * h) = eulerPoint v h t0 y0 n := by
     unfold eulerPath; norm_num [add_sub_cancel_left, h_pos.ne']
 
+private theorem floor_eq_of_mem_Ico (h_pos : 0 < h) (t0 : ℝ) (n : ℕ) (t : ℝ)
+  (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
+  ⌊(t - t0) / h⌋₊ = n :=
+  Nat.floor_eq_on_Ico n _ ⟨by rw [le_div_iff₀ h_pos]; linarith [ht.1],
+    by rw [div_lt_iff₀ h_pos]; linarith [ht.2]⟩
+
 /--
 The derivative of the Euler path (defined as the right derivative everywhere).
 -/
@@ -85,9 +91,7 @@ private theorem eulerPath_continuousOn_Icc {E : Type*} [NormedAddCommGroup E] [N
       rw [this]; simp [eulerStep, eulerPoint]; module
     · -- Left endpoint or interior: floor = n
       show _ = f t; simp only [f, eulerPath]
-      rw [show ⌊(t - t0) / h⌋₊ = n from (Nat.floor_eq_iff (div_nonneg (by nlinarith [ht.1]) h_pos.le)).2
-        ⟨by nlinarith [ht.1, mul_div_cancel₀ (t - t0) h_pos.ne'],
-         by nlinarith [mul_div_cancel₀ (t - t0) h_pos.ne']⟩]
+      rw [floor_eq_of_mem_Ico h_pos t0 n t ⟨ht.1, h_lt⟩]
 
 /-
 The Euler path is continuous on [t0, ∞).
@@ -128,7 +132,7 @@ theorem eulerPath_hasDerivWithinAt {E : Type*} [NormedAddCommGroup E] [NormedSpa
         refine' eventually_nhdsWithin_iff.mpr _
         filter_upwards [Ioo_mem_nhds (show t > t0 - h by linarith) (show t < t0 + h * (⌊(t - t0) / h⌋₊ + 1) by nlinarith [Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne'])] with x hx hx'; simp_all +decide [mul_comm h];
         rw [eulerPath];
-        rw [show ⌊(x - t0) / h⌋₊ = ⌊(t - t0) / h⌋₊ from Nat.floor_eq_iff (div_nonneg (by linarith) h_pos.le) |>.2 ⟨by nlinarith [Nat.floor_le (show 0 ≤ (t - t0) / h by exact div_nonneg (by linarith) h_pos.le), mul_div_cancel₀ (t - t0) h_pos.ne', mul_div_cancel₀ (x - t0) h_pos.ne'], by nlinarith [Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne', mul_div_cancel₀ (x - t0) h_pos.ne']⟩];
+        rw [floor_eq_of_mem_Ico h_pos t0 ⌊(t - t0) / h⌋₊ x ⟨by nlinarith [Nat.floor_le (show 0 ≤ (t - t0) / h from div_nonneg (by linarith) h_pos.le), mul_div_cancel₀ (t - t0) h_pos.ne'], by nlinarith [mul_div_cancel₀ (x - t0) h_pos.ne']⟩];
       rw [Filter.EventuallyEq.hasDerivWithinAt_iff] at *
       any_goals tauto
       rw [hasDerivWithinAt_iff_tendsto]; simp +decide [← sub_smul, eulerDeriv]
@@ -141,10 +145,7 @@ theorem eulerPath_eq_on_Ico {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ 
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (n : ℕ)
   (t : ℝ) (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
   eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-    have h_floor : Nat.floor ((t - t0) / h) = n :=
-      (Nat.floor_eq_iff (div_nonneg (by nlinarith [ht.1]) h_pos.le)).2
-        ⟨by rw [le_div_iff₀ h_pos]; linarith [ht.1], by rw [div_lt_iff₀ h_pos]; linarith [ht.2]⟩
-    simp [eulerPath, h_floor]
+    simp [eulerPath, floor_eq_of_mem_Ico h_pos t0 n t ht]
 
 /-
 On the interval [t_n, t_{n+1}), the Euler derivative is constant and equal to v(t_n, y_n).
@@ -153,11 +154,7 @@ theorem eulerDeriv_eq_on_Ico {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (n : ℕ)
   (t : ℝ) (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
   eulerDeriv v h t0 y0 t = v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-    -- By definition of Nat.floor, we have Nat.floor ((t - t0) / h) = n since t is in the interval [t0 + n*h, t0 + (n+1)*h).
-    have h_floor : Nat.floor ((t - t0) / h) = n :=
-      (Nat.floor_eq_iff (div_nonneg (by nlinarith [ht.1]) h_pos.le)).2
-        ⟨by rw [le_div_iff₀ h_pos]; linarith [ht.1], by rw [div_lt_iff₀ h_pos]; linarith [ht.2]⟩
-    unfold eulerDeriv; aesop
+    unfold eulerDeriv; simp [floor_eq_of_mem_Ico h_pos t0 n t ht]
 
 /-
 The distance between the Euler point and the Euler path on the interval [t_n, t_{n+1}) is bounded by h * M.
