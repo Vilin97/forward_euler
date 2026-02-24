@@ -73,35 +73,21 @@ The Euler path is continuous on each grid interval [t₀ + n*h, t₀ + (n+1)*h].
 private theorem eulerPath_continuousOn_Icc {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (n : ℕ) :
   ContinuousOn (eulerPath v h t0 y0) (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) := by
-    have h_affine_cont : ContinuousOn (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) := by fun_prop
-    have h_eq : ∀ t ∈ Set.Ioo (t0 + n * h) (t0 + (n + 1) * h), eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-      intro t ht; simp [eulerPath]
-      rw [show ⌊(t - t0) / h⌋₊ = n by exact (Nat.floor_eq_iff (div_nonneg (by nlinarith [ht.1, ht.2]) h_pos.le)).2 ⟨by nlinarith [ht.1, ht.2, mul_div_cancel₀ (t - t0) h_pos.ne'], by nlinarith [ht.1, ht.2, mul_div_cancel₀ (t - t0) h_pos.ne']⟩]
-    have h_cont_ioo : ContinuousOn (fun t => eulerPath v h t0 y0 t) (Set.Ioo (t0 + n * h) (t0 + (n + 1) * h)) :=
-      (h_affine_cont.mono Set.Ioo_subset_Icc_self).congr h_eq
-    have h_tendsto_right : Filter.Tendsto (fun t => eulerPath v h t0 y0 t) (nhdsWithin (t0 + n * h) (Set.Ioi (t0 + n * h))) (nhds (eulerPath v h t0 y0 (t0 + n * h))) := by
-      have : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + n * h) (Set.Ioi (t0 + n * h))) (nhds (eulerPoint v h t0 y0 n + (t0 + n * h - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n))) :=
-        tendsto_nhdsWithin_of_tendsto_nhds (Continuous.tendsto' (by continuity) _ _ (by simp +decide))
-      convert this.congr' _ using 2
-      · simp +decide; exact eulerPath_grid_point v h h_pos t0 y0 n
-      · filter_upwards [Ioo_mem_nhdsGT_of_mem ⟨le_rfl, show t0 + n * h < t0 + (n + 1) * h by linarith⟩] with t ht using (h_eq t ht).symm
-    have h_tendsto_left : Filter.Tendsto (fun t => eulerPath v h t0 y0 t) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPath v h t0 y0 (t0 + (n + 1) * h))) := by
-      have : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPath v h t0 y0 (t0 + (n + 1) * h))) := by
-        have : Filter.Tendsto (fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) (nhdsWithin (t0 + (n + 1) * h) (Set.Iio (t0 + (n + 1) * h))) (nhds (eulerPoint v h t0 y0 n + ((t0 + (n + 1) * h) - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n))) :=
-          tendsto_const_nhds.add (Filter.Tendsto.smul (continuousWithinAt_id.sub continuousWithinAt_const) tendsto_const_nhds)
-        convert this using 2; ring_nf!
-        convert eulerPath_grid_point v h h_pos t0 y0 (n + 1) using 1; ring_nf!; push_cast; ring_nf
-      refine' this.congr' _
-      filter_upwards [Ioo_mem_nhdsLT (show t0 + n * h < t0 + (n + 1) * h by linarith)] with t ht using (h_eq t ht).symm
+    set f := fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)
+    suffices h_eq : Set.EqOn (eulerPath v h t0 y0) f (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) from
+      (by fun_prop : ContinuousOn f _).congr h_eq
     intro t ht
-    cases eq_or_lt_of_le ht.1 <;> cases eq_or_lt_of_le ht.2 <;> simp_all +decide [ContinuousWithinAt]
-    · rw [Metric.tendsto_nhdsWithin_nhds] at *
-      intro ε hε; rcases ‹∀ ε > 0, ∃ δ > 0, ∀ ⦃x : ℝ⦄, x ∈ Set.Ioi t → Dist.dist x t < δ → Dist.dist (eulerPath v h t0 y0 x) (eulerPath v h t0 y0 t) < ε› ε hε with ⟨δ, hδ, H⟩
-      exact ⟨δ, hδ, fun x hx₁ hx₂ => by cases lt_or_eq_of_le hx₁.out <;> aesop⟩
-    · rw [Metric.tendsto_nhdsWithin_nhds] at *
-      intro ε ε_pos; rcases h_tendsto_left ε ε_pos with ⟨δ, δ_pos, H⟩
-      exact ⟨δ, δ_pos, fun x hx₁ hx₂ => if hx₃ : x = t0 + (n + 1) * h then by simpa [hx₃] else H (lt_of_le_of_ne hx₁ hx₃) hx₂⟩
-    · convert h_cont_ioo.continuousAt (Ioo_mem_nhds ‹_› ‹_›) |> fun h => h.mono_left inf_le_left using 1; aesop
+    rcases eq_or_lt_of_le ht.2 with rfl | h_lt
+    · -- Right endpoint: both equal y_{n+1}
+      show _ = f _; simp only [f]
+      have := eulerPath_grid_point v h h_pos t0 y0 (n + 1)
+      simp only [Nat.cast_add, Nat.cast_one] at this
+      rw [this]; simp [eulerStep, eulerPoint]; module
+    · -- Left endpoint or interior: floor = n
+      show _ = f t; simp only [f, eulerPath]
+      rw [show ⌊(t - t0) / h⌋₊ = n from (Nat.floor_eq_iff (div_nonneg (by nlinarith [ht.1]) h_pos.le)).2
+        ⟨by nlinarith [ht.1, mul_div_cancel₀ (t - t0) h_pos.ne'],
+         by nlinarith [mul_div_cancel₀ (t - t0) h_pos.ne']⟩]
 
 /-
 The Euler path is continuous on [t0, ∞).
