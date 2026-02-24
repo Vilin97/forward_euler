@@ -104,51 +104,30 @@ private theorem eulerPath_continuousOn_Icc {E : Type*} [NormedAddCommGroup E] [N
     · convert h_cont_ioo.continuousAt (Ioo_mem_nhds ‹_› ‹_›) |> fun h => h.mono_left inf_le_left using 1; aesop
 
 /-
-At a grid point t₀ + n*h, the Euler path is continuous within [t₀, ∞).
--/
-private theorem eulerPath_continuousWithinAt_gridpoint {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (n : ℕ) :
-  ContinuousWithinAt (eulerPath v h t0 y0) (Set.Ici t0) (t0 + n * h) := by
-    have h_right : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) (t0 + n * h) :=
-      (eulerPath_continuousOn_Icc v h h_pos t0 y0 n).continuousWithinAt (Set.left_mem_Icc.mpr (by nlinarith))
-    have h_left : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + n * h)) (t0 + n * h) := by
-      by_cases hn : n = 0
-      · simp [hn]; refine' ContinuousWithinAt.congr _ _ _
-        use fun t => y0 + (t - t0) • v t0 y0
-        · exact Continuous.continuousWithinAt (by continuity)
-        · intro y hy; unfold eulerPath
-          simp +decide [Nat.floor_eq_zero.mpr (show (y - t0) / h < 1 by rw [div_lt_iff₀ h_pos]; linarith [hy.1, hy.2])]; rfl
-        · simp +decide [eulerPath]; rfl
-      · exact ((eulerPath_continuousOn_Icc v h h_pos t0 y0 (n - 1) |>.mono (by cases n <;> aesop)).continuousWithinAt
-          (Set.right_mem_Icc.mpr (by nlinarith)))
-    have h_combined : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h)) (t0 + n * h) := by
-      refine Metric.continuousWithinAt_iff.mpr fun ε hε => ?_
-      obtain ⟨δ₁, hδ₁, H₁⟩ := Metric.continuousWithinAt_iff.mp h_left ε hε
-      obtain ⟨δ₂, hδ₂, H₂⟩ := Metric.continuousWithinAt_iff.mp h_right ε hε
-      exact ⟨min δ₁ δ₂, lt_min hδ₁ hδ₂, fun x hx₁ hx₂ => by
-        by_cases hcase : x ≤ t0 + n * h
-        · exact H₁ ⟨hx₁.1, hcase⟩ (lt_of_lt_of_le hx₂ (min_le_left _ _))
-        · exact H₂ ⟨le_of_lt (not_le.mp hcase), hx₁.2⟩ (lt_of_lt_of_le hx₂ (min_le_right _ _))⟩
-    have : ContinuousWithinAt (eulerPath v h t0 y0) (Set.Icc (t0 + (n - 1) * h) (t0 + (n + 1) * h) ∩ Set.Ici t0) (t0 + n * h) :=
-      h_combined.mono Set.inter_subset_left
-    refine' this.mono_of_mem_nhdsWithin _
-    rw [mem_nhdsWithin_iff_exists_mem_nhds_inter]
-    exact ⟨Set.Icc (t0 + h * (n - 1)) (t0 + h * (n + 1)), Icc_mem_nhds (by nlinarith) (by nlinarith),
-      fun x hx => ⟨⟨by linarith [hx.1.1], by linarith [hx.1.2]⟩, hx.2⟩⟩
-
-/-
 The Euler path is continuous on [t0, ∞).
 -/
 theorem eulerPath_continuous {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) :
   ContinuousOn (eulerPath v h t0 y0) (Set.Ici t0) := by
-    intro t ht
-    by_cases h_cases : ∃ n : ℕ, t = t0 + n * h
-    · obtain ⟨ n, rfl ⟩ := h_cases
-      exact eulerPath_continuousWithinAt_gridpoint v h h_pos t0 y0 n
-    · obtain ⟨n, hn⟩ : ∃ n : ℕ, t ∈ Set.Ioo (t0 + n * h) (t0 + (n + 1) * h) := by
-        exact ⟨_, lt_of_le_of_ne (by nlinarith [Nat.floor_le (div_nonneg (sub_nonneg.mpr ht) h_pos.le), mul_div_cancel₀ (t - t0) h_pos.ne']) fun h => h_cases ⟨_, h.symm⟩, by nlinarith [Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne']⟩
-      exact (eulerPath_continuousOn_Icc v h h_pos t0 y0 n).continuousAt (Icc_mem_nhds hn.1 hn.2) |>.continuousWithinAt
+    have h_cover : Set.Ici t0 ⊆ ⋃ n : ℕ, Set.Icc (t0 + n * h) (t0 + (↑n + 1) * h) := by
+      intro t ht; rw [Set.mem_iUnion]
+      exact ⟨⌊(t - t0) / h⌋₊, by constructor <;> nlinarith [Nat.floor_le (div_nonneg (sub_nonneg.mpr ht) h_pos.le), mul_div_cancel₀ (t - t0) h_pos.ne', Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne']⟩
+    have h_lf : LocallyFinite (fun n : ℕ => Set.Icc (t0 + n * h) (t0 + (↑n + 1) * h)) := by
+      intro x
+      refine ⟨Set.Ioo (x - 1) (x + 1), Ioo_mem_nhds (by linarith) (by linarith), ?_⟩
+      apply Set.Finite.subset (Set.finite_Icc 0 (⌈(x + 1 - t0) / h⌉₊))
+      intro n hn
+      simp only [Set.mem_setOf_eq] at hn
+      obtain ⟨z, hz1, hz2⟩ := hn
+      simp only [Set.mem_Icc]; constructor
+      · omega
+      · by_contra h_neg; push_neg at h_neg
+        have : (n : ℝ) * h ≥ (x + 1 - t0) + h := by
+          have h7 : (n : ℝ) * h ≥ ((x + 1 - t0) / h + 1) * h :=
+            mul_le_mul_of_nonneg_right (by nlinarith [Nat.le_ceil ((x + 1 - t0) / h), (show (n : ℝ) ≥ (⌈(x + 1 - t0) / h⌉₊ : ℝ) + 1 from by exact_mod_cast h_neg)]) h_pos.le
+          rw [add_mul, div_mul_cancel₀ _ h_pos.ne'] at h7; linarith
+        linarith [hz1.1, hz2.2]
+    exact (h_lf.continuousOn_iUnion (fun n => isClosed_Icc) (fun n => eulerPath_continuousOn_Icc v h h_pos t0 y0 n)).mono h_cover
 
 /-
 The Euler path has the expected right derivative everywhere.
