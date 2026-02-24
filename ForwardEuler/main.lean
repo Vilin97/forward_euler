@@ -109,14 +109,11 @@ private theorem eulerPath_continuousOn_Icc {E : Type*} [NormedAddCommGroup E] [N
       (by fun_prop : ContinuousOn f _).congr h_eq
     intro t ht
     rcases eq_or_lt_of_le ht.2 with rfl | h_lt
-    · -- Right endpoint: both equal y_{n+1}
-      show _ = f _; simp only [f]
+    · show _ = f _; simp only [f]
       have := eulerPath_grid_point v h h_pos t0 y0 (n + 1)
       simp only [Nat.cast_add, Nat.cast_one] at this
       rw [this]; simp [eulerStep, eulerPoint]; module
-    · -- Left endpoint or interior: floor = n
-      show _ = f t; simp only [f, eulerPath]
-      rw [floor_eq_of_mem_Ico h_pos t0 n t ⟨ht.1, h_lt⟩]
+    · simp only [f, eulerPath, floor_eq_of_mem_Ico h_pos t0 n t ⟨ht.1, h_lt⟩]
 
 /-
 The Euler path is continuous on [t0, ∞).
@@ -124,24 +121,17 @@ The Euler path is continuous on [t0, ∞).
 theorem eulerPath_continuous {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E) :
   ContinuousOn (eulerPath v h t0 y0) (Set.Ici t0) := by
-    have h_cover : Set.Ici t0 ⊆ ⋃ n : ℕ, Set.Icc (t0 + n * h) (t0 + (↑n + 1) * h) := by
-      intro t ht; exact Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_floor h_pos t0 t ht)⟩
-    have h_lf : LocallyFinite (fun n : ℕ => Set.Icc (t0 + n * h) (t0 + (↑n + 1) * h)) := by
-      intro x
-      refine ⟨Set.Ioo (x - 1) (x + 1), Ioo_mem_nhds (by linarith) (by linarith), ?_⟩
-      apply Set.Finite.subset (Set.finite_Icc 0 (⌈(x + 1 - t0) / h⌉₊))
-      intro n hn
-      simp only [Set.mem_setOf_eq] at hn
-      obtain ⟨z, hz1, hz2⟩ := hn
-      simp only [Set.mem_Icc]; constructor
-      · omega
-      · by_contra h_neg; push_neg at h_neg
-        have : (n : ℝ) * h ≥ (x + 1 - t0) + h := by
-          have h7 : (n : ℝ) * h ≥ ((x + 1 - t0) / h + 1) * h :=
-            mul_le_mul_of_nonneg_right (by nlinarith [Nat.le_ceil ((x + 1 - t0) / h), (show (n : ℝ) ≥ (⌈(x + 1 - t0) / h⌉₊ : ℝ) + 1 from by exact_mod_cast h_neg)]) h_pos.le
-          rw [add_mul, div_mul_cancel₀ _ h_pos.ne'] at h7; linarith
-        linarith [hz1.1, hz2.2]
-    exact (h_lf.continuousOn_iUnion (fun n => isClosed_Icc) (fun n => eulerPath_continuousOn_Icc v h h_pos t0 y0 n)).mono h_cover
+    set S := fun n : ℕ => Set.Icc (t0 + n * h) (t0 + (↑n + 1) * h)
+    suffices h_lf : LocallyFinite S from
+      (h_lf.continuousOn_iUnion (fun n => isClosed_Icc) (fun n => eulerPath_continuousOn_Icc v h h_pos t0 y0 n)).mono
+        (fun t (ht : t0 ≤ t) => Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_floor h_pos t0 t ht)⟩)
+    intro x; refine ⟨Set.Ioo (x - h) (x + h), Ioo_mem_nhds (by linarith) (by linarith), ?_⟩
+    apply Set.Finite.subset (Set.finite_Icc (⌊(x - h - t0) / h⌋₊) (⌈(x + h - t0) / h⌉₊))
+    intro n hn; obtain ⟨z, ⟨hz1a, hz1b⟩, hz2a, hz2b⟩ := Set.mem_setOf_eq ▸ hn
+    have h1 : (x - h - t0) / h < ↑n + 1 := by rw [div_lt_iff₀ h_pos]; nlinarith
+    have h2 : (n : ℝ) ≤ (x + h - t0) / h := by rw [le_div_iff₀ h_pos]; nlinarith
+    exact ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by omega)).mpr (by exact_mod_cast h1)),
+           Nat.cast_le.mp (h2.trans (Nat.le_ceil _))⟩
 
 /-
 The Euler path has the expected right derivative everywhere.
