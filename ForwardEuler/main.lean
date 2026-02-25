@@ -115,11 +115,11 @@ The Euler path is continuous on [t0, ∞).
 theorem eulerPath_continuous (v : ℝ → E → E) {h : ℝ} (h_pos : 0 < h) {t0 : ℝ} {y0 : E} :
   ContinuousOn (eulerPath v h t0 y0) (Set.Ici t0) := by
     apply continuousOn_Ici_of_Icc_grid h_pos; intro n
-    set yn := eulerPoint v h t0 y0 n; set vn := v (t0 + n * h) yn
-    apply (show ContinuousOn (fun t => yn + (t - (t0 + n * h)) • vn) _ by fun_prop).congr
+    apply (show ContinuousOn (fun t => eulerPoint v h t0 y0 n +
+      (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) _ by fun_prop).congr
     intro t ht; rcases eq_or_lt_of_le ht.2 with rfl | h_lt
-    · norm_cast; rw [eulerPath_grid_point v h_pos t0 y0 (n + 1)]; simp [eulerStep, eulerPoint, yn, vn]; module
-    · simp [eulerPath, floor_eq_of_mem_Ico h_pos ⟨ht.1, h_lt⟩, yn, vn]
+    · norm_cast; rw [eulerPath_grid_point v h_pos t0 y0 (n + 1)]; simp [eulerStep, eulerPoint]; module
+    · simp [eulerPath, floor_eq_of_mem_Ico h_pos ⟨ht.1, h_lt⟩]
 
 /-
 The Euler path has the expected right derivative everywhere.
