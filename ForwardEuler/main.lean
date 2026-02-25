@@ -29,61 +29,65 @@ convergence.
 
 /-! ## Grid helpers -/
 
+variable {α : Type*} [Field α] [LinearOrder α] [FloorSemiring α] [IsStrictOrderedRing α]
+
 /-- If `t ∈ [a + n * h, a + (n + 1) * h)` and `0 < h`, then `⌊(t - a) / h⌋₊ = n`. -/
-theorem Nat.floor_div_eq_of_mem_Ico {h : ℝ} (hh : 0 < h) {a : ℝ}
-    {n : ℕ} {t : ℝ} (ht : t ∈ Set.Ico (a + n * h) (a + (n + 1) * h)) :
+theorem Nat.floor_div_eq_of_mem_Ico {h : α} (hh : 0 < h) {a : α}
+    {n : ℕ} {t : α} (ht : t ∈ Set.Ico (a + n * h) (a + (n + 1) * h)) :
     ⌊(t - a) / h⌋₊ = n := by
   refine Nat.floor_eq_on_Ico n _ ⟨?_, ?_⟩ <;>
-    (first | rw [le_div_iff₀ hh] | rw [div_lt_iff₀ hh]) <;> grind
+    (first | rw [le_div_iff₀ hh] | rw [div_lt_iff₀ hh]) <;> linarith [ht.1, ht.2]
 
 /-- If `0 < h` and `a ≤ t`, then `t` lies in the floor interval
 `[a + ⌊(t - a) / h⌋₊ * h, a + (⌊(t - a) / h⌋₊ + 1) * h)`. -/
-theorem mem_Ico_Nat_floor_div {h : ℝ} (hh : 0 < h) {a t : ℝ} (hat : a ≤ t) :
+theorem mem_Ico_Nat_floor_div {h : α} (hh : 0 < h) {a t : α} (hat : a ≤ t) :
     t ∈ Set.Ico (a + ⌊(t - a) / h⌋₊ * h) (a + (↑⌊(t - a) / h⌋₊ + 1) * h) := by
   constructor <;> nlinarith [Nat.floor_le (div_nonneg (sub_nonneg.mpr hat) hh.le),
     Nat.lt_floor_add_one ((t - a) / h), mul_div_cancel₀ (t - a) hh.ne']
-
-/-- The regular grid of closed intervals `[a + n * h, a + (n + 1) * h]` is locally finite. -/
-theorem locallyFinite_Icc_grid {h : ℝ} (hh : 0 < h) (a : ℝ) :
-    LocallyFinite fun n : ℕ => Set.Icc (a + n * h) (a + (↑n + 1) * h) := by
-  intro x
-  refine ⟨Set.Ioo (x - h) (x + h), Ioo_mem_nhds (by linarith) (by linarith),
-    (Set.finite_Icc (⌊(x - h - a) / h⌋₊) (⌈(x + h - a) / h⌉₊)).subset ?_⟩
-  rintro n ⟨z, ⟨hz1, hz2⟩, hz3, hz4⟩
-  refine ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by linarith)).mpr ?_),
-    Nat.cast_le.mp ((?_ : (n : ℝ) ≤ _).trans (Nat.le_ceil _))⟩ <;>
-    (first | rw [div_lt_iff₀ hh] | rw [le_div_iff₀ hh]) <;> grind
-
-/-- A function continuous on each cell `[a + n * h, a + (n + 1) * h]` is continuous
-on `[a, ∞)`. -/
-theorem ContinuousOn.of_Icc_grid {E : Type*} [TopologicalSpace E]
-    {f : ℝ → E} {h : ℝ} (hh : 0 < h) {a : ℝ}
-    (hf : ∀ n : ℕ, ContinuousOn f (Set.Icc (a + n * h) (a + (n + 1) * h))) :
-    ContinuousOn f (Set.Ici a) :=
-  ((locallyFinite_Icc_grid hh a).continuousOn_iUnion (fun _ => isClosed_Icc) (hf ·)).mono
-    fun t (hat : a ≤ t) =>
-      Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_Nat_floor_div hh hat)⟩
 
 /-! ## Piecewise linear interpolation -/
 
 /-- The piecewise linear interpolation of a sequence `y` with slopes `c` on a regular grid
 with step size `h` starting at `a`. On `[a + n * h, a + (n + 1) * h)`, the value is
 `y n + (t - (a + n * h)) • c n`. -/
-noncomputable def piecewiseLinear {E : Type*} [AddCommGroup E] [Module ℝ E]
-    (y : ℕ → E) (c : ℕ → E) (h : ℝ) (a : ℝ) (t : ℝ) : E :=
+noncomputable def piecewiseLinear {E : Type*} [AddCommGroup E] [Module α E]
+    (y : ℕ → E) (c : ℕ → E) (h : α) (a : α) (t : α) : E :=
   let n := ⌊(t - a) / h⌋₊
   y n + (t - (a + n * h)) • c n
 
 /-- The piecewise constant function taking value `c n` on `[a + n * h, a + (n + 1) * h)`. -/
-noncomputable def piecewiseConst {E : Type*} (c : ℕ → E) (h : ℝ) (a : ℝ) (t : ℝ) : E :=
+noncomputable def piecewiseConst {E : Type*} (c : ℕ → E) (h : α) (a : α) (t : α) : E :=
   c ⌊(t - a) / h⌋₊
 
 /-- The piecewise constant function equals `c n` on `[a + n * h, a + (n + 1) * h)`. -/
-theorem piecewiseConst_eq_on_Ico {E : Type*} {c : ℕ → E} {h : ℝ} {a : ℝ}
-    (hh : 0 < h) {n : ℕ} {t : ℝ}
+theorem piecewiseConst_eq_on_Ico {E : Type*} {c : ℕ → E} {h : α} {a : α}
+    (hh : 0 < h) {n : ℕ} {t : α}
     (ht : t ∈ Set.Ico (a + n * h) (a + (n + 1) * h)) :
     piecewiseConst c h a t = c n := by
   simp [piecewiseConst, Nat.floor_div_eq_of_mem_Ico hh ht]
+
+variable [TopologicalSpace α] [OrderTopology α]
+
+/-- The regular grid of closed intervals `[a + n * h, a + (n + 1) * h]` is locally finite. -/
+theorem locallyFinite_Icc_grid {h : α} (hh : 0 < h) (a : α) :
+    LocallyFinite fun n : ℕ => Set.Icc (a + n * h) (a + (↑n + 1) * h) := by
+  intro x
+  refine ⟨Set.Ioo (x - h) (x + h), Ioo_mem_nhds (by linarith) (by linarith),
+    (Set.finite_Icc (⌊(x - h - a) / h⌋₊) (⌈(x + h - a) / h⌉₊)).subset ?_⟩
+  rintro n ⟨z, ⟨hz1, hz2⟩, hz3, hz4⟩
+  refine ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by linarith)).mpr ?_),
+    Nat.cast_le.mp ((?_ : (n : α) ≤ _).trans (Nat.le_ceil _))⟩ <;>
+    (first | rw [div_lt_iff₀ hh] | rw [le_div_iff₀ hh]) <;> push_cast <;> nlinarith
+
+/-- A function continuous on each cell `[a + n * h, a + (n + 1) * h]` is continuous
+on `[a, ∞)`. -/
+theorem ContinuousOn.of_Icc_grid {F : Type*} [TopologicalSpace F]
+    {f : α → F} {h : α} (hh : 0 < h) {a : α}
+    (hf : ∀ n : ℕ, ContinuousOn f (Set.Icc (a + n * h) (a + (n + 1) * h))) :
+    ContinuousOn f (Set.Ici a) :=
+  ((locallyFinite_Icc_grid hh a).continuousOn_iUnion (fun _ => isClosed_Icc) (hf ·)).mono
+    fun t (hat : a ≤ t) =>
+      Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_Nat_floor_div hh hat)⟩
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   {y : ℕ → E} {c : ℕ → E} {h : ℝ} {a : ℝ}
