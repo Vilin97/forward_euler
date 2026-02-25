@@ -12,7 +12,114 @@ We implement the explicit Euler method for ODEs and prove its convergence.
 Consider the initial value problem $y'(t) = v(t, y(t))$, $y(t_0) = y_0$, where
 $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
 
-\section{Definitions}
+\section{Grid helpers}
+
+\begin{lemma}[Floor on grid interval]
+  \label{lem:floor_eq_of_mem_Ico}
+  \lean{floor_eq_of_mem_Ico}
+  \leanok
+  If $t \in [a + nh, a + (n+1)h)$ and $h > 0$, then
+  $\lfloor (t - a)/h \rfloor = n$.
+\end{lemma}
+
+\begin{lemma}[Membership in floor interval]
+  \label{lem:mem_Ico_floor}
+  \lean{mem_Ico_floor}
+  \leanok
+  If $h > 0$ and $t \geq a$, then
+  $t \in [a + \lfloor (t-a)/h \rfloor \cdot h,\; a + (\lfloor (t-a)/h \rfloor + 1) \cdot h)$.
+\end{lemma}
+
+\begin{theorem}[Local finiteness of regular grid]
+  \label{thm:locallyFinite_Icc_grid}
+  \lean{locallyFinite_Icc_grid}
+  \leanok
+  \uses{lem:floor_eq_of_mem_Ico, lem:mem_Ico_floor}
+  The family of closed intervals $\{[a + nh, a + (n+1)h]\}_{n \in \mathbb{N}}$
+  is locally finite.
+\end{theorem}
+
+\begin{theorem}[Continuity from grid cells]
+  \label{thm:continuousOn_Ici_of_Icc_grid}
+  \lean{continuousOn_Ici_of_Icc_grid}
+  \leanok
+  \uses{thm:locallyFinite_Icc_grid, lem:mem_Ico_floor}
+  If $f$ is continuous on each cell $[a + nh, a + (n+1)h]$, then $f$ is
+  continuous on $[a, \infty)$.
+\end{theorem}
+
+\section{Piecewise linear interpolation}
+
+\begin{definition}[Piecewise linear interpolation]
+  \label{def:piecewiseLinear}
+  \lean{piecewiseLinear}
+  \leanok
+  Given a sequence of values $y$ and slopes $c$ on a regular grid with
+  step size $h$ starting at $a$, the piecewise linear interpolation is
+  defined for $t$ with $n = \lfloor (t-a)/h \rfloor$ by
+  \[
+    \mathrm{piecewiseLinear}(y, c, h, a, t) = y_n + (t - (a + nh)) \cdot c_n.
+  \]
+\end{definition}
+
+\begin{definition}[Piecewise constant function]
+  \label{def:piecewiseConst}
+  \lean{piecewiseConst}
+  \leanok
+  The piecewise constant function taking value $c_n$ on
+  $[a + nh, a + (n+1)h)$:
+  \[
+    \mathrm{piecewiseConst}(c, h, a, t) = c_{\lfloor (t-a)/h \rfloor}.
+  \]
+\end{definition}
+
+\begin{theorem}[Piecewise constant on intervals]
+  \label{thm:piecewiseConst_eq_on_Ico}
+  \lean{piecewiseConst_eq_on_Ico}
+  \leanok
+  \uses{def:piecewiseConst, lem:floor_eq_of_mem_Ico}
+  For $t \in [a + nh, a + (n+1)h)$,
+  $\mathrm{piecewiseConst}(c, h, a, t) = c_n$.
+\end{theorem}
+
+\begin{theorem}[Grid point values]
+  \label{thm:piecewiseLinear_grid_point}
+  \lean{piecewiseLinear_grid_point}
+  \leanok
+  \uses{def:piecewiseLinear}
+  $\mathrm{piecewiseLinear}(y, c, h, a, a + nh) = y_n$.
+\end{theorem}
+
+\begin{theorem}[Piecewise linear on intervals]
+  \label{thm:piecewiseLinear_eq_on_Ico}
+  \lean{piecewiseLinear_eq_on_Ico}
+  \leanok
+  \uses{def:piecewiseLinear, lem:floor_eq_of_mem_Ico}
+  For $t \in [a + nh, a + (n+1)h)$,
+  \[
+    \mathrm{piecewiseLinear}(y, c, h, a, t) = y_n + (t - (a + nh)) \cdot c_n.
+  \]
+\end{theorem}
+
+\begin{theorem}[Continuity of piecewise linear interpolation]
+  \label{thm:piecewiseLinear_continuous}
+  \lean{piecewiseLinear_continuous}
+  \leanok
+  \uses{def:piecewiseLinear, thm:continuousOn_Ici_of_Icc_grid, thm:piecewiseLinear_grid_point, thm:piecewiseLinear_eq_on_Ico}
+  If $y_{n+1} = y_n + h \cdot c_n$ for all $n$, then
+  $\mathrm{piecewiseLinear}(y, c, h, a)$ is continuous on $[a, \infty)$.
+\end{theorem}
+
+\begin{theorem}[Right derivative of piecewise linear interpolation]
+  \label{thm:piecewiseLinear_hasDerivWithinAt}
+  \lean{piecewiseLinear_hasDerivWithinAt}
+  \leanok
+  \uses{def:piecewiseLinear, def:piecewiseConst, lem:mem_Ico_floor, thm:piecewiseLinear_eq_on_Ico}
+  For $t \geq a$, the piecewise linear interpolation has right derivative
+  $\mathrm{piecewiseConst}(c, h, a, t)$ at $t$.
+\end{theorem}
+
+\section{Euler method definitions}
 
 \begin{definition}[Euler step]
   \label{def:eulerStep}
@@ -36,125 +143,61 @@ $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
   \]
 \end{definition}
 
+\begin{definition}[Euler slope]
+  \label{def:eulerSlope}
+  \lean{eulerSlope}
+  \leanok
+  \uses{def:eulerPoint}
+  The \emph{Euler slope} on the $n$-th cell is
+  $v(t_0 + nh, y_n)$.
+\end{definition}
+
 \begin{definition}[Euler path]
   \label{def:eulerPath}
   \lean{eulerPath}
   \leanok
-  \uses{def:eulerPoint}
-  The \emph{Euler path} is the piecewise linear interpolation of the Euler points.
-  For $t \in [t_n, t_{n+1})$ where $n = \lfloor (t - t_0)/h \rfloor$,
+  \uses{def:eulerPoint, def:eulerSlope, def:piecewiseLinear}
+  The \emph{Euler path} is the piecewise linear interpolation of the
+  Euler points with Euler slopes:
   \[
-    \mathrm{eulerPath}(t) = y_n + (t - t_n) \cdot v(t_n, y_n).
+    \mathrm{eulerPath} = \mathrm{piecewiseLinear}(y, c, h, t_0)
   \]
+  where $y_n = \mathrm{eulerPoint}(v, h, t_0, y_0, n)$ and
+  $c_n = \mathrm{eulerSlope}(v, h, t_0, y_0, n)$.
 \end{definition}
 
 \begin{definition}[Euler derivative]
   \label{def:eulerDeriv}
   \lean{eulerDeriv}
   \leanok
-  \uses{def:eulerPoint}
+  \uses{def:eulerSlope, def:piecewiseConst}
   The \emph{Euler derivative} is the piecewise constant right derivative of
-  the Euler path. For $t \in [t_n, t_{n+1})$,
+  the Euler path:
   \[
-    \mathrm{eulerDeriv}(t) = v(t_n, y_n).
+    \mathrm{eulerDeriv} = \mathrm{piecewiseConst}(\mathrm{eulerSlope}, h, t_0).
   \]
 \end{definition}
 
-\section{Properties of the Euler path}
-
-\begin{theorem}[Grid point values]
-  \label{thm:eulerPath_grid_point}
-  \lean{eulerPath_grid_point}
-  \leanok
-  \uses{def:eulerPath, def:eulerPoint}
-  The Euler path coincides with the Euler points at the grid points:
-  \[
-    \mathrm{eulerPath}(t_0 + nh) = y_n.
-  \]
-\end{theorem}
-
-\begin{theorem}[Continuity]
-  \label{thm:eulerPath_continuous}
-  \lean{eulerPath_continuous}
-  \leanok
-  \uses{def:eulerPath, thm:eulerPath_grid_point}
-  The Euler path is continuous on $[t_0, \infty)$.
-\end{theorem}
-
-\begin{theorem}[Right derivative]
-  \label{thm:eulerPath_hasDerivWithinAt}
-  \lean{eulerPath_hasDerivWithinAt}
-  \leanok
-  \uses{def:eulerPath, def:eulerDeriv, thm:eulerPath_grid_point}
-  For $t \geq t_0$, the Euler path has right derivative
-  $\mathrm{eulerDeriv}(t)$ at $t$.
-\end{theorem}
-
-\begin{theorem}[Euler path on intervals]
-  \label{thm:eulerPath_eq_on_Ico}
-  \lean{eulerPath_eq_on_Ico}
-  \leanok
-  \uses{def:eulerPath, def:eulerPoint}
-  For $t \in [t_n, t_{n+1})$,
-  \[
-    \mathrm{eulerPath}(t) = y_n + (t - t_n) \cdot v(t_n, y_n).
-  \]
-\end{theorem}
-
-\begin{theorem}[Euler derivative on intervals]
-  \label{thm:eulerDeriv_eq_on_Ico}
-  \lean{eulerDeriv_eq_on_Ico}
-  \leanok
-  \uses{def:eulerDeriv, def:eulerPoint}
-  For $t \in [t_n, t_{n+1})$,
-  \[
-    \mathrm{eulerDeriv}(t) = v(t_n, y_n).
-  \]
-\end{theorem}
-
 \section{Error analysis}
 
-\begin{lemma}[Point--path distance]
-  \label{lem:euler_dist_point_path}
-  \lean{euler_dist_point_path}
-  \leanok
-  \uses{def:eulerPoint, def:eulerPath, thm:eulerPath_eq_on_Ico}
-  Suppose $\|v(t, y)\| \leq M$ for all $t, y$. For $t \in [t_n, t_{n+1})$,
-  \[
-    \mathrm{dist}(y_n, \mathrm{eulerPath}(t)) \leq hM.
-  \]
-\end{lemma}
-
-\begin{lemma}[Local derivative bound]
-  \label{lem:euler_derivative_bound}
-  \lean{euler_derivative_bound}
-  \leanok
-  \uses{def:eulerDeriv, def:eulerPath, thm:eulerDeriv_eq_on_Ico, lem:euler_dist_point_path}
-  Suppose $v$ is $K$-Lipschitz in space, $L$-Lipschitz in time, and
-  $\|v\| \leq M$. For $t \in [t_n, t_{n+1})$,
-  \[
-    \mathrm{dist}(\mathrm{eulerDeriv}(t),\; v(t, \mathrm{eulerPath}(t)))
-    \leq h(L + KM).
-  \]
-\end{lemma}
-
-\begin{lemma}[Global derivative bound]
-  \label{lem:euler_derivative_global_bound}
+\begin{theorem}[Global derivative bound]
+  \label{thm:euler_derivative_global_bound}
   \lean{euler_derivative_global_bound}
   \leanok
-  \uses{lem:euler_derivative_bound}
-  Under the same hypotheses, for all $t \geq t_0$,
+  \uses{def:eulerDeriv, def:eulerPath, def:eulerPoint, thm:piecewiseLinear_eq_on_Ico, thm:piecewiseConst_eq_on_Ico, lem:mem_Ico_floor}
+  Suppose $v$ is $K$-Lipschitz in space, $L$-Lipschitz in time, and
+  $\|v\| \leq M$. For all $t \geq t_0$,
   \[
     \mathrm{dist}(\mathrm{eulerDeriv}(t),\; v(t, \mathrm{eulerPath}(t)))
     \leq h(L + KM).
   \]
-\end{lemma}
+\end{theorem}
 
 \begin{theorem}[Error bound]
   \label{thm:euler_error_bound}
   \lean{euler_error_bound}
   \leanok
-  \uses{thm:eulerPath_continuous, thm:eulerPath_hasDerivWithinAt, lem:euler_derivative_global_bound, thm:eulerPath_grid_point}
+  \uses{thm:piecewiseLinear_continuous, thm:piecewiseLinear_hasDerivWithinAt, thm:euler_derivative_global_bound}
   Let $\mathrm{sol}$ be the true solution of the ODE on $[t_0, T]$.
   Under the Lipschitz and boundedness hypotheses on $v$,
   \[

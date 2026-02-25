@@ -16,12 +16,24 @@ Given an ODE $y'(t) = v(t, y(t))$, $y(t_0) = y_0$, where $v \colon \mathbb{R} \t
 
 ## Main results
 
-### Definitions
+### Generic infrastructure (Mathlib-ready)
+
+| Definition / Theorem | Description |
+| --- | --- |
+| `piecewiseLinear` | Piecewise linear interpolation on a regular grid |
+| `piecewiseConst` | Piecewise constant function on a regular grid |
+| `locallyFinite_Icc_grid` | The regular grid $[a + nh, a + (n+1)h]$ is locally finite |
+| `continuousOn_Ici_of_Icc_grid` | Cell-wise continuity implies continuity on $[a, \infty)$ |
+| `piecewiseLinear_continuous` | Piecewise linear interpolation is continuous |
+| `piecewiseLinear_hasDerivWithinAt` | Right derivative of piecewise linear interpolation is the piecewise constant slope |
+
+### Euler method definitions
 
 | Definition | Description |
 | --- | --- |
 | `eulerStep` | A single step: $y_{n+1} = y_n + h \cdot v(t_n, y_n)$ |
 | `eulerPoint` | The sequence of Euler points, defined recursively |
+| `eulerSlope` | The slope $v(t_n, y_n)$ on the $n$-th cell |
 | `eulerPath` | Piecewise linear interpolation of the Euler points |
 | `eulerDeriv` | Piecewise constant right derivative of the Euler path |
 
@@ -29,11 +41,7 @@ Given an ODE $y'(t) = v(t, y(t))$, $y(t_0) = y_0$, where $v \colon \mathbb{R} \t
 
 | Theorem | Statement |
 | --- | --- |
-| `eulerPath_grid_point` | $\mathrm{eulerPath}(t_0 + nh) = y_n$ |
-| `eulerPath_continuous` | The Euler path is continuous on $[t_0, \infty)$ |
-| `eulerPath_hasDerivWithinAt` | The Euler path has right derivative $\mathrm{eulerDeriv}(t)$ at each $t \geq t_0$ |
-| `euler_dist_point_path` | $\mathrm{dist}(y_n, \mathrm{eulerPath}(t)) \leq hM$ for $t \in [t_n, t_{n+1})$ |
-| `euler_derivative_bound` | $\mathrm{dist}(\mathrm{eulerDeriv}(t), v(t, \mathrm{eulerPath}(t))) \leq h(L + KM)$ |
+| `euler_derivative_global_bound` | $\mathrm{dist}(\mathrm{eulerDeriv}(t), v(t, \mathrm{eulerPath}(t))) \leq h(L + KM)$ |
 | `euler_error_bound` | $\mathrm{dist}(\mathrm{eulerPath}(t), \mathrm{sol}(t)) \leq \mathrm{gronwallBound}(0, K, h(L+KM), t - t_0)$ |
 | `euler_convergence` | $\mathrm{eulerPath}(v, h, t_0, y_0, t) \to \mathrm{sol}(t)$ as $h \to 0^+$ |
 
