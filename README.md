@@ -23,27 +23,27 @@ Given an ODE $y'(t) = v(t, y(t))$, $y(t_0) = y_0$, where $v \colon \mathbb{R} \t
 | `piecewiseLinear` | Piecewise linear interpolation on a regular grid |
 | `piecewiseConst` | Piecewise constant function on a regular grid |
 | `locallyFinite_Icc_grid` | The regular grid $[a + nh, a + (n+1)h]$ is locally finite |
-| `continuousOn_Ici_of_Icc_grid` | Cell-wise continuity implies continuity on $[a, \infty)$ |
-| `piecewiseLinear_continuous` | Piecewise linear interpolation is continuous |
+| `ContinuousOn.of_Icc_grid` | Cell-wise continuity implies continuity on $[a, \infty)$ |
+| `piecewiseLinear_continuousOn` | Piecewise linear interpolation is continuous |
 | `piecewiseLinear_hasDerivWithinAt` | Right derivative of piecewise linear interpolation is the piecewise constant slope |
 
 ### Euler method definitions
 
 | Definition | Description |
 | --- | --- |
-| `eulerStep` | A single step: $y_{n+1} = y_n + h \cdot v(t_n, y_n)$ |
-| `eulerPoint` | The sequence of Euler points, defined recursively |
-| `eulerSlope` | The slope $v(t_n, y_n)$ on the $n$-th cell |
-| `eulerPath` | Piecewise linear interpolation of the Euler points |
-| `eulerDeriv` | Piecewise constant right derivative of the Euler path |
+| `ODE.EulerMethod.step` | A single step: $y_{n+1} = y_n + h \cdot v(t_n, y_n)$ |
+| `ODE.EulerMethod.point` | The sequence of Euler points, defined recursively |
+| `ODE.EulerMethod.slope` | The slope $v(t_n, y_n)$ on the $n$-th cell |
+| `ODE.EulerMethod.path` | Piecewise linear interpolation of the Euler points |
+| `ODE.EulerMethod.deriv` | Piecewise constant right derivative of the Euler path |
 
 ### Theorems
 
 | Theorem | Statement |
 | --- | --- |
-| `euler_derivative_global_bound` | $\mathrm{dist}(\mathrm{eulerDeriv}(t), v(t, \mathrm{eulerPath}(t))) \leq h(L + KM)$ |
-| `euler_error_bound` | $\mathrm{dist}(\mathrm{eulerPath}(t), \mathrm{sol}(t)) \leq \mathrm{gronwallBound}(0, K, h(L+KM), t - t_0)$ |
-| `euler_convergence` | $\mathrm{eulerPath}(v, h, t_0, y_0, t) \to \mathrm{sol}(t)$ as $h \to 0^+$ |
+| `ODE.EulerMethod.dist_deriv_le` | $\mathrm{dist}(\mathrm{deriv}(t), v(t, \mathrm{path}(t))) \leq h(L + KM)$ |
+| `ODE.EulerMethod.dist_path_le` | $\mathrm{dist}(\mathrm{path}(t), \mathrm{sol}(t)) \leq \mathrm{gronwallBound}(0, K, h(L+KM), t - t_0)$ |
+| `ODE.EulerMethod.tendsto_path` | $\mathrm{path}(v, h, t_0, y_0, t) \to \mathrm{sol}(t)$ as $h \to 0^+$ |
 
 ### Assumptions
 

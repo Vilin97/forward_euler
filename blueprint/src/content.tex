@@ -16,7 +16,7 @@ $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
 
 \begin{lemma}[Floor on grid interval]
   \label{lem:floor_eq_of_mem_Ico}
-  \lean{floor_eq_of_mem_Ico}
+  \lean{Nat.floor_div_eq_of_mem_Ico}
   \leanok
   If $t \in [a + nh, a + (n+1)h)$ and $h > 0$, then
   $\lfloor (t - a)/h \rfloor = n$.
@@ -24,7 +24,7 @@ $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
 
 \begin{lemma}[Membership in floor interval]
   \label{lem:mem_Ico_floor}
-  \lean{mem_Ico_floor}
+  \lean{mem_Ico_Nat_floor_div}
   \leanok
   If $h > 0$ and $t \geq a$, then
   $t \in [a + \lfloor (t-a)/h \rfloor \cdot h,\; a + (\lfloor (t-a)/h \rfloor + 1) \cdot h)$.
@@ -41,7 +41,7 @@ $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
 
 \begin{theorem}[Continuity from grid cells]
   \label{thm:continuousOn_Ici_of_Icc_grid}
-  \lean{continuousOn_Ici_of_Icc_grid}
+  \lean{ContinuousOn.of_Icc_grid}
   \leanok
   \uses{thm:locallyFinite_Icc_grid, lem:mem_Ico_floor}
   If $f$ is continuous on each cell $[a + nh, a + (n+1)h]$, then $f$ is
@@ -83,8 +83,8 @@ $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
 \end{theorem}
 
 \begin{theorem}[Grid point values]
-  \label{thm:piecewiseLinear_grid_point}
-  \lean{piecewiseLinear_grid_point}
+  \label{thm:piecewiseLinear_apply_grid}
+  \lean{piecewiseLinear_apply_grid}
   \leanok
   \uses{def:piecewiseLinear}
   $\mathrm{piecewiseLinear}(y, c, h, a, a + nh) = y_n$.
@@ -102,10 +102,10 @@ $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
 \end{theorem}
 
 \begin{theorem}[Continuity of piecewise linear interpolation]
-  \label{thm:piecewiseLinear_continuous}
-  \lean{piecewiseLinear_continuous}
+  \label{thm:piecewiseLinear_continuousOn}
+  \lean{piecewiseLinear_continuousOn}
   \leanok
-  \uses{def:piecewiseLinear, thm:continuousOn_Ici_of_Icc_grid, thm:piecewiseLinear_grid_point, thm:piecewiseLinear_eq_on_Ico}
+  \uses{def:piecewiseLinear, thm:continuousOn_Ici_of_Icc_grid, thm:piecewiseLinear_apply_grid, thm:piecewiseLinear_eq_on_Ico}
   If $y_{n+1} = y_n + h \cdot c_n$ for all $n$, then
   $\mathrm{piecewiseLinear}(y, c, h, a)$ is continuous on $[a, \infty)$.
 \end{theorem}
@@ -123,29 +123,29 @@ $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
 
 \begin{definition}[Euler step]
   \label{def:eulerStep}
-  \lean{eulerStep}
+  \lean{ODE.EulerMethod.step}
   \leanok
   Given a vector field $v$, step size $h$, time $t$, and current value $y$, the
   \emph{Euler step} is
   \[
-    \mathrm{eulerStep}(v, h, t, y) = y + h \cdot v(t, y).
+    \mathrm{step}(v, h, t, y) = y + h \cdot v(t, y).
   \]
 \end{definition}
 
 \begin{definition}[Euler points]
   \label{def:eulerPoint}
-  \lean{eulerPoint}
+  \lean{ODE.EulerMethod.point}
   \leanok
   \uses{def:eulerStep}
   The sequence of \emph{Euler points} is defined recursively by
   \[
-    y_0 = y_0, \qquad y_{n+1} = \mathrm{eulerStep}(v, h, t_0 + nh, y_n).
+    y_0 = y_0, \qquad y_{n+1} = \mathrm{step}(v, h, t_0 + nh, y_n).
   \]
 \end{definition}
 
 \begin{definition}[Euler slope]
   \label{def:eulerSlope}
-  \lean{eulerSlope}
+  \lean{ODE.EulerMethod.slope}
   \leanok
   \uses{def:eulerPoint}
   The \emph{Euler slope} on the $n$-th cell is
@@ -154,68 +154,68 @@ $v \colon \mathbb{R} \times E \to E$ is a vector field on a normed space $E$.
 
 \begin{definition}[Euler path]
   \label{def:eulerPath}
-  \lean{eulerPath}
+  \lean{ODE.EulerMethod.path}
   \leanok
   \uses{def:eulerPoint, def:eulerSlope, def:piecewiseLinear}
   The \emph{Euler path} is the piecewise linear interpolation of the
   Euler points with Euler slopes:
   \[
-    \mathrm{eulerPath} = \mathrm{piecewiseLinear}(y, c, h, t_0)
+    \mathrm{path} = \mathrm{piecewiseLinear}(y, c, h, t_0)
   \]
-  where $y_n = \mathrm{eulerPoint}(v, h, t_0, y_0, n)$ and
-  $c_n = \mathrm{eulerSlope}(v, h, t_0, y_0, n)$.
+  where $y_n = \mathrm{point}(v, h, t_0, y_0, n)$ and
+  $c_n = \mathrm{slope}(v, h, t_0, y_0, n)$.
 \end{definition}
 
 \begin{definition}[Euler derivative]
   \label{def:eulerDeriv}
-  \lean{eulerDeriv}
+  \lean{ODE.EulerMethod.deriv}
   \leanok
   \uses{def:eulerSlope, def:piecewiseConst}
   The \emph{Euler derivative} is the piecewise constant right derivative of
   the Euler path:
   \[
-    \mathrm{eulerDeriv} = \mathrm{piecewiseConst}(\mathrm{eulerSlope}, h, t_0).
+    \mathrm{deriv} = \mathrm{piecewiseConst}(\mathrm{slope}, h, t_0).
   \]
 \end{definition}
 
 \section{Error analysis}
 
 \begin{theorem}[Global derivative bound]
-  \label{thm:euler_derivative_global_bound}
-  \lean{euler_derivative_global_bound}
+  \label{thm:dist_deriv_le}
+  \lean{ODE.EulerMethod.dist_deriv_le}
   \leanok
   \uses{def:eulerDeriv, def:eulerPath, def:eulerPoint, thm:piecewiseLinear_eq_on_Ico, thm:piecewiseConst_eq_on_Ico, lem:mem_Ico_floor}
   Suppose $v$ is $K$-Lipschitz in space, $L$-Lipschitz in time, and
   $\|v\| \leq M$. For all $t \geq t_0$,
   \[
-    \mathrm{dist}(\mathrm{eulerDeriv}(t),\; v(t, \mathrm{eulerPath}(t)))
+    \mathrm{dist}(\mathrm{deriv}(t),\; v(t, \mathrm{path}(t)))
     \leq h(L + KM).
   \]
 \end{theorem}
 
 \begin{theorem}[Error bound]
-  \label{thm:euler_error_bound}
-  \lean{euler_error_bound}
+  \label{thm:dist_path_le}
+  \lean{ODE.EulerMethod.dist_path_le}
   \leanok
-  \uses{thm:piecewiseLinear_continuous, thm:piecewiseLinear_hasDerivWithinAt, thm:euler_derivative_global_bound}
+  \uses{thm:piecewiseLinear_continuousOn, thm:piecewiseLinear_hasDerivWithinAt, thm:dist_deriv_le}
   Let $\mathrm{sol}$ be the true solution of the ODE on $[t_0, T]$.
   Under the Lipschitz and boundedness hypotheses on $v$,
   \[
-    \mathrm{dist}(\mathrm{eulerPath}(t), \mathrm{sol}(t))
+    \mathrm{dist}(\mathrm{path}(t), \mathrm{sol}(t))
     \leq \mathrm{gronwallBound}(0, K, h(L + KM), t - t_0)
   \]
   for all $t \in [t_0, T]$.
 \end{theorem}
 
 \begin{theorem}[Convergence]
-  \label{thm:euler_convergence}
-  \lean{euler_convergence}
+  \label{thm:tendsto_path}
+  \lean{ODE.EulerMethod.tendsto_path}
   \leanok
-  \uses{thm:euler_error_bound}
+  \uses{thm:dist_path_le}
   The Euler method converges to the true solution as the step size $h \to 0^+$:
   for all $t \in [t_0, T]$,
   \[
-    \mathrm{eulerPath}(v, h, t_0, y_0, t) \to \mathrm{sol}(t)
+    \mathrm{path}(v, h, t_0, y_0, t) \to \mathrm{sol}(t)
     \quad \text{as } h \to 0^+.
   \]
 \end{theorem}
