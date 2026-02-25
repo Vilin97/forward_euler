@@ -110,9 +110,8 @@ private theorem eulerPath_continuousOn_Icc {E : Type*} [NormedAddCommGroup E] [N
     intro t ht
     rcases eq_or_lt_of_le ht.2 with rfl | h_lt
     · show _ = f _; simp only [f]
-      have := eulerPath_grid_point v h h_pos t0 y0 (n + 1)
-      simp only [Nat.cast_add, Nat.cast_one] at this
-      rw [this]; simp [eulerStep, eulerPoint]; module
+      rw [show (↑n + 1 : ℝ) = ↑(n + 1) from by push_cast; ring, eulerPath_grid_point v h h_pos t0 y0 (n + 1)]
+      simp [eulerStep, eulerPoint]; module
     · simp only [f, eulerPath, floor_eq_of_mem_Ico h_pos t0 n t ⟨ht.1, h_lt⟩]
 
 /-
@@ -127,11 +126,11 @@ theorem eulerPath_continuous {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
         (fun t (ht : t0 ≤ t) => Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_floor h_pos t0 t ht)⟩)
     intro x; refine ⟨Set.Ioo (x - h) (x + h), Ioo_mem_nhds (by linarith) (by linarith), ?_⟩
     apply Set.Finite.subset (Set.finite_Icc (⌊(x - h - t0) / h⌋₊) (⌈(x + h - t0) / h⌉₊))
-    intro n hn; obtain ⟨z, ⟨hz1a, hz1b⟩, hz2a, hz2b⟩ := Set.mem_setOf_eq ▸ hn
-    have h1 : (x - h - t0) / h < ↑n + 1 := by rw [div_lt_iff₀ h_pos]; nlinarith
-    have h2 : (n : ℝ) ≤ (x + h - t0) / h := by rw [le_div_iff₀ h_pos]; nlinarith
-    exact ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by omega)).mpr (by exact_mod_cast h1)),
-           Nat.cast_le.mp (h2.trans (Nat.le_ceil _))⟩
+    rintro n ⟨z, ⟨hz1a, hz1b⟩, hz2a, hz2b⟩
+    refine ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by omega)).mpr ?_),
+           Nat.cast_le.mp ((?_ : (n : ℝ) ≤ _).trans (Nat.le_ceil _))⟩
+    · rw [div_lt_iff₀ h_pos]; push_cast; nlinarith
+    · rw [le_div_iff₀ h_pos]; nlinarith
 
 /-
 The Euler path has the expected right derivative everywhere.
@@ -181,23 +180,16 @@ theorem euler_derivative_bound {E : Type*} [NormedAddCommGroup E] [NormedSpace �
   (v_bound : ∀ t y, ‖v t y‖ ≤ M)
   (t : ℝ) (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
   dist (eulerDeriv v h t0 y0 t) (v t (eulerPath v h t0 y0 t)) ≤ h * (L + K * M) := by
-    -- Using the Lipschitz properties and the bounds we established, we can bound the distances.
-    have h1 : dist (v (t0 + n * h) (eulerPoint v h t0 y0 n)) (v t (eulerPoint v h t0 y0 n)) ≤ L * (t - (t0 + n * h)) := by
-      simpa only [dist_eq_norm, norm_sub_rev] using
-        (hv_t (eulerPoint v h t0 y0 n)).dist_le_mul (t0 + n * h) t |> le_trans <|
-        by rw [dist_eq_norm, Real.norm_of_nonpos] <;> linarith [ht.1, ht.2]
-    have h2 : dist (v t (eulerPoint v h t0 y0 n)) (v t (eulerPath v h t0 y0 t)) ≤ K * (h * M) :=
-      le_trans ((hv t).dist_le_mul _ _)
-        (mul_le_mul_of_nonneg_left (euler_dist_point_path v h h_pos t0 y0 n M v_bound t ht) (NNReal.coe_nonneg _))
-    -- Using the triangle inequality, we can combine these bounds.
+    have h1 : dist (v (t0 + n * h) (eulerPoint v h t0 y0 n)) (v t (eulerPoint v h t0 y0 n)) ≤ L * (t - (t0 + n * h)) :=
+      le_trans ((hv_t _).dist_le_mul _ _) (by rw [dist_eq_norm, Real.norm_of_nonpos (by linarith [ht.1])]; linarith [ht.2])
     calc dist (eulerDeriv v h t0 y0 t) (v t (eulerPath v h t0 y0 t))
         = dist (v (t0 + n * h) (eulerPoint v h t0 y0 n)) (v t (eulerPath v h t0 y0 t)) := by
           rw [eulerDeriv_eq_on_Ico v h h_pos t0 y0 n t ht]
-      _ ≤ L * (t - (t0 + n * h)) + K * (h * M) := dist_triangle _ _ _ |>.trans (add_le_add h1 h2)
+      _ ≤ L * (t - (t0 + n * h)) + K * (h * M) :=
+          dist_triangle _ _ _ |>.trans (add_le_add h1 (le_trans ((hv t).dist_le_mul _ _)
+            (mul_le_mul_of_nonneg_left (euler_dist_point_path v h h_pos t0 y0 n M v_bound t ht) (NNReal.coe_nonneg _))))
       _ ≤ h * (L + K * M) := by
-          have : (0 : ℝ) ≤ L := by positivity
-          have : (0 : ℝ) ≤ K * M := mul_nonneg (NNReal.coe_nonneg _) (le_trans (norm_nonneg _) (v_bound t0 y0))
-          nlinarith [ht.1, ht.2]
+          nlinarith [ht.1, ht.2, NNReal.coe_nonneg K, NNReal.coe_nonneg L, norm_nonneg (v t0 y0), v_bound t0 y0]
 
 /-
 Global bound on the difference between the Euler derivative and the vector field.
@@ -252,11 +244,14 @@ theorem euler_convergence {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   (sol_init : sol t0 = y0) :
   ∀ t ∈ Set.Icc t0 T, Filter.Tendsto (fun h => eulerPath v h t0 y0 t) (nhdsWithin 0 (Set.Ioi 0)) (nhds (sol t)) := by
     intro t ht
-    -- Since $\epsilon \mapsto \text{gronwallBound } 0\ K\ \epsilon\ (t - t_0)$ is continuous at 0, and takes value 0 at 0, $g(h) \to 0$.
-    have h_gronwall_zero : Filter.Tendsto (fun h => gronwallBound 0 K (h * (L + K * M)) (t - t0)) (nhdsWithin 0 (Set.Ioi 0)) (nhds 0) := by
-      convert (gronwallBound_continuous_ε _ _ _).continuousWithinAt.tendsto.comp (show Filter.Tendsto (fun h : ℝ => h * (L + K * M)) (nhdsWithin 0 (Set.Ioi 0)) (nhdsWithin 0 (Set.Ici 0)) from ?_) using 2
-      · exact (gronwallBound_ε0_δ0 _ _).symm
-      · refine' Filter.Tendsto.inf _ _ <;> norm_num
-        · exact Continuous.tendsto' (by continuity) _ _ (by simp +decide)
-        · exact fun x hx => mul_nonneg hx.le (add_nonneg (NNReal.coe_nonneg _) (mul_nonneg (NNReal.coe_nonneg _) (le_trans (norm_nonneg _) (v_bound t0 y0))))
-    exact tendsto_iff_dist_tendsto_zero.mpr (squeeze_zero_norm' (Filter.eventually_of_mem self_mem_nhdsWithin fun x hx => by simpa using euler_error_bound v x hx t0 y0 T K L M hv hv_t v_bound sol sol_cont sol_deriv sol_init t ht) h_gronwall_zero)
+    have h_gronwall_zero : Filter.Tendsto (fun h => gronwallBound 0 K (h * (↑L + ↑K * M)) (t - t0))
+        (nhdsWithin 0 (Set.Ioi 0)) (nhds 0) :=
+      tendsto_nhdsWithin_of_tendsto_nhds <|
+        Continuous.tendsto' ((gronwallBound_continuous_ε 0 K (t - t0)).comp
+          (continuous_id.mul continuous_const)) 0 0 (by simp [gronwallBound_ε0_δ0])
+    have h_bound : ∀ᶠ x in nhdsWithin 0 (Set.Ioi 0),
+        dist (eulerPath v x t0 y0 t) (sol t) ≤ gronwallBound 0 K (x * (↑L + ↑K * M)) (t - t0) :=
+      Filter.eventually_of_mem self_mem_nhdsWithin fun x (hx : (0 : ℝ) < x) =>
+        euler_error_bound v x hx t0 y0 T K L M hv hv_t v_bound sol sol_cont sol_deriv sol_init t ht
+    exact tendsto_iff_dist_tendsto_zero.mpr (squeeze_zero_norm' (by simpa using h_bound)
+      h_gronwall_zero)
