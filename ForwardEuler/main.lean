@@ -94,29 +94,32 @@ theorem eulerDeriv_eq_on_Ico (v : ℝ → E → E) {h : ℝ} (h_pos : 0 < h) {t0
   eulerDeriv v h t0 y0 t = v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
     simp [eulerDeriv, floor_eq_of_mem_Ico h_pos ht]
 
+omit [NormedSpace ℝ E] in
+/-- A function continuous on each cell `[a + n*h, a + (n+1)*h]` is continuous on `[a, ∞)`. -/
+private theorem continuousOn_Ici_of_Icc_grid {f : ℝ → E} {h : ℝ} (h_pos : 0 < h) {a : ℝ}
+    (hf : ∀ n : ℕ, ContinuousOn f (Set.Icc (a + n * h) (a + (n + 1) * h))) :
+    ContinuousOn f (Set.Ici a) := by
+  have h_lf : LocallyFinite fun n : ℕ => Set.Icc (a + n * h) (a + (↑n + 1) * h) := by
+    intro x; refine ⟨Set.Ioo (x - h) (x + h), Ioo_mem_nhds (by linarith) (by linarith),
+      (Set.finite_Icc (⌊(x - h - a) / h⌋₊) (⌈(x + h - a) / h⌉₊)).subset ?_⟩
+    rintro n ⟨z, ⟨hz1, hz2⟩, hz3, hz4⟩
+    refine ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by linarith)).mpr ?_),
+           Nat.cast_le.mp ((?_ : (n : ℝ) ≤ _).trans (Nat.le_ceil _))⟩ <;>
+    (first | rw [div_lt_iff₀ h_pos] | rw [le_div_iff₀ h_pos]) <;> grind
+  exact (h_lf.continuousOn_iUnion (fun n => isClosed_Icc) (hf ·)).mono fun t (ht : a ≤ t) =>
+    Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_floor h_pos ht)⟩
+
 /-
 The Euler path is continuous on [t0, ∞).
 -/
 theorem eulerPath_continuous (v : ℝ → E → E) {h : ℝ} (h_pos : 0 < h) {t0 : ℝ} {y0 : E} :
   ContinuousOn (eulerPath v h t0 y0) (Set.Ici t0) := by
-    have cell (n : ℕ) : ContinuousOn (eulerPath v h t0 y0) (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) := by
-      set f := fun t => eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)
-      suffices Set.EqOn (eulerPath v h t0 y0) f (Set.Icc (t0 + n * h) (t0 + (n + 1) * h)) from
-        (by fun_prop : ContinuousOn f _).congr this
-      intro t ht; rcases eq_or_lt_of_le ht.2 with rfl | h_lt
-      · show _ = f _; simp only [f]; norm_cast
-        rw [eulerPath_grid_point v h_pos t0 y0 (n + 1)]; simp [eulerStep, eulerPoint]; module
-      · simp only [f, eulerPath, floor_eq_of_mem_Ico h_pos ⟨ht.1, h_lt⟩]
-    set S := fun n : ℕ => Set.Icc (t0 + n * h) (t0 + (↑n + 1) * h)
-    suffices h_lf : LocallyFinite S from
-      (h_lf.continuousOn_iUnion (fun n => isClosed_Icc) (cell ·)).mono
-        (fun t (ht : t0 ≤ t) => Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_floor h_pos ht)⟩)
-    intro x; refine ⟨Set.Ioo (x - h) (x + h), Ioo_mem_nhds (by grind) (by grind), ?_⟩
-    apply Set.Finite.subset (Set.finite_Icc (⌊(x - h - t0) / h⌋₊) (⌈(x + h - t0) / h⌉₊))
-    rintro n ⟨z, ⟨hz1a, hz1b⟩, hz2a, hz2b⟩
-    refine ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by grind)).mpr ?_),
-           Nat.cast_le.mp ((?_ : (n : ℝ) ≤ _).trans (Nat.le_ceil _))⟩ <;>
-    (first | rw [div_lt_iff₀ h_pos] | rw [le_div_iff₀ h_pos]) <;> grind
+    apply continuousOn_Ici_of_Icc_grid h_pos; intro n
+    set yn := eulerPoint v h t0 y0 n; set vn := v (t0 + n * h) yn
+    apply (show ContinuousOn (fun t => yn + (t - (t0 + n * h)) • vn) _ by fun_prop).congr
+    intro t ht; rcases eq_or_lt_of_le ht.2 with rfl | h_lt
+    · norm_cast; rw [eulerPath_grid_point v h_pos t0 y0 (n + 1)]; simp [eulerStep, eulerPoint, yn, vn]; module
+    · simp [eulerPath, floor_eq_of_mem_Ico h_pos ⟨ht.1, h_lt⟩, yn, vn]
 
 /-
 The Euler path has the expected right derivative everywhere.
