@@ -71,15 +71,13 @@ theorem eulerPath_grid_point (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0
 private theorem floor_eq_of_mem_Ico (h_pos : 0 < h) (t0 : ℝ) (n : ℕ) (t : ℝ)
   (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
   ⌊(t - t0) / h⌋₊ = n :=
-  Nat.floor_eq_on_Ico n _ ⟨by rw [le_div_iff₀ h_pos]; grind,
-    by rw [div_lt_iff₀ h_pos]; grind⟩
+  by refine Nat.floor_eq_on_Ico n _ ⟨?_, ?_⟩ <;>
+     (first | rw [le_div_iff₀ h_pos] | rw [div_lt_iff₀ h_pos]) <;> grind
 
 private theorem mem_Ico_floor (h_pos : 0 < h) (t0 : ℝ) (t : ℝ) (ht : t0 ≤ t) :
   t ∈ Set.Ico (t0 + ⌊(t - t0) / h⌋₊ * h) (t0 + (↑⌊(t - t0) / h⌋₊ + 1) * h) :=
-  ⟨by nlinarith [Nat.floor_le (div_nonneg (sub_nonneg.mpr ht) h_pos.le),
-      mul_div_cancel₀ (t - t0) h_pos.ne'],
-   by nlinarith [Nat.lt_floor_add_one ((t - t0) / h),
-      mul_div_cancel₀ (t - t0) h_pos.ne']⟩
+  by constructor <;> nlinarith [Nat.floor_le (div_nonneg (sub_nonneg.mpr ht) h_pos.le),
+      Nat.lt_floor_add_one ((t - t0) / h), mul_div_cancel₀ (t - t0) h_pos.ne']
 
 /-
 On the interval [t_n, t_{n+1}), the Euler path is given by the affine function starting at y_n
@@ -126,31 +124,22 @@ theorem eulerPath_continuous (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0
     apply Set.Finite.subset (Set.finite_Icc (⌊(x - h - t0) / h⌋₊) (⌈(x + h - t0) / h⌉₊))
     rintro n ⟨z, ⟨hz1a, hz1b⟩, hz2a, hz2b⟩
     refine ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by grind)).mpr ?_),
-           Nat.cast_le.mp ((?_ : (n : ℝ) ≤ _).trans (Nat.le_ceil _))⟩
-    · rw [div_lt_iff₀ h_pos]; grind
-    · rw [le_div_iff₀ h_pos]; grind
+           Nat.cast_le.mp ((?_ : (n : ℝ) ≤ _).trans (Nat.le_ceil _))⟩ <;>
+    (first | rw [div_lt_iff₀ h_pos] | rw [le_div_iff₀ h_pos]) <;> grind
 
 /-
 The Euler path has the expected right derivative everywhere.
 -/
 theorem eulerPath_hasDerivWithinAt (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t0 : ℝ) (y0 : E)
-  (t : ℝ) (ht : t0 ≤ t) :
+  {t : ℝ} (ht : t0 ≤ t) :
   HasDerivWithinAt (eulerPath v h t0 y0) (eulerDeriv v h t0 y0 t) (Set.Ici t) t := by
-    set n := ⌊(t - t0) / h⌋₊
-    set tn := t0 + n * h
-    set yn := eulerPoint v h t0 y0 n
-    set c := v tn yn
-    have h_affine : HasDerivAt (fun t' => yn + (t' - tn) • c) ((1 : ℝ) • c) t :=
-      (hasDerivAt_id t |>.sub_const tn |>.smul_const c |>.const_add yn)
-    have h_eq : ∀ᶠ t' in nhdsWithin t (Set.Ioi t), eulerPath v h t0 y0 t' = yn + (t' - tn) • c := by
-      have h_mem := mem_Ico_floor h_pos t0 t ht
-      filter_upwards [Ioo_mem_nhdsGT h_mem.2] with x hx
-      exact eulerPath_eq_on_Ico v h h_pos t0 y0 n x ⟨le_trans h_mem.1 hx.1.le, hx.2⟩
-    have h_val : eulerPath v h t0 y0 t = yn + (t - tn) • c := by
-      simp [eulerPath, n, tn, yn, c]
-    rw [show eulerDeriv v h t0 y0 t = c from by simp [eulerDeriv, n, tn, yn, c]]
-    exact hasDerivWithinAt_Ioi_iff_Ici.mp
-      ((h_affine.hasDerivWithinAt.congr_of_eventuallyEq h_eq h_val.symm).congr_deriv (one_smul _ _))
+    set n := ⌊(t - t0) / h⌋₊; set tn := t0 + n * h; set yn := eulerPoint v h t0 y0 n; set c := v tn yn
+    obtain ⟨h1, h2⟩ := mem_Ico_floor h_pos t0 t ht; simp only [eulerDeriv]
+    exact hasDerivWithinAt_Ioi_iff_Ici.mp (((hasDerivAt_id t |>.sub_const tn |>.smul_const c
+      |>.const_add yn).hasDerivWithinAt.congr_of_eventuallyEq (by
+        filter_upwards [Ioo_mem_nhdsGT h2] with x hx
+        exact eulerPath_eq_on_Ico v h h_pos t0 y0 n x ⟨h1.trans hx.1.le, hx.2⟩)
+      (by simp [eulerPath, n, tn, yn, c])).congr_deriv (one_smul _ _))
 
 /-
 The distance between the Euler point and the Euler path on the interval [t_n, t_{n+1}) is
@@ -162,7 +151,7 @@ theorem euler_dist_point_path (v : ℝ → E → E) (h : ℝ) (h_pos : 0 < h) (t
   dist (eulerPoint v h t0 y0 n) (eulerPath v h t0 y0 t) ≤ h * M := by
     rw [eulerPath_eq_on_Ico v h h_pos t0 y0 n t ht, dist_eq_norm]
     simp +decide [norm_smul, abs_of_nonneg (sub_nonneg.2 ht.1)]
-    exact mul_le_mul (by grind) (v_bound _ _) (by grind) (by grind)
+    refine mul_le_mul ?_ (v_bound _ _) ?_ ?_ <;> grind
 
 section EulerBounds
 
@@ -192,14 +181,14 @@ theorem euler_derivative_bound (n : ℕ)
 /-
 Global bound on the difference between the Euler derivative and the vector field.
 -/
-theorem euler_derivative_global_bound (t : ℝ) (ht : t0 ≤ t) :
+theorem euler_derivative_global_bound {t : ℝ} (ht : t0 ≤ t) :
   dist (eulerDeriv v h t0 y0 t) (v t (eulerPath v h t0 y0 t)) ≤ h * (L + K * M) :=
     euler_derivative_bound v h h_pos t0 y0 K L M hv hv_t v_bound _ t (mem_Ico_floor h_pos t0 t ht)
 
 /-
 Error bound for the Euler method using Gronwall's inequality.
 -/
-theorem euler_error_bound (T : ℝ)
+theorem euler_error_bound {T : ℝ}
   (sol : ℝ → E) (sol_cont : ContinuousOn sol (Set.Icc t0 T))
   (sol_deriv : ∀ t ∈ Set.Ico t0 T, HasDerivWithinAt sol (v t (sol t)) (Set.Ici t) t)
   (sol_init : sol t0 = y0) :
@@ -208,12 +197,12 @@ theorem euler_error_bound (T : ℝ)
     have := dist_le_of_approx_trajectories_ODE (δ := 0) (εg := 0)
       (f' := fun t => eulerDeriv v h t0 y0 t) (g' := fun t => v t (sol t))
       hv ((eulerPath_continuous v h h_pos t0 y0).mono Set.Icc_subset_Ici_self)
-      (fun t ht => eulerPath_hasDerivWithinAt v h h_pos t0 y0 t ht.1)
-      (fun t ht => euler_derivative_global_bound v h h_pos t0 y0 K L M hv hv_t v_bound t ht.1)
+      (fun t ht => eulerPath_hasDerivWithinAt v h h_pos t0 y0 ht.1)
+      (fun t ht => euler_derivative_global_bound v h h_pos t0 y0 K L M hv hv_t v_bound ht.1)
       sol_cont sol_deriv (fun _ _ => (dist_self _).le)
       (by simp [eulerPath, eulerPoint, sol_init])
       t ht
-    rwa [add_zero] at this
+    grind
 
 end EulerBounds
 
@@ -237,6 +226,6 @@ theorem euler_convergence (v : ℝ → E → E) (t0 : ℝ) (y0 : E) (T : ℝ)
     have h_bound : ∀ᶠ x in nhdsWithin 0 (Set.Ioi 0),
         dist (eulerPath v x t0 y0 t) (sol t) ≤ gronwallBound 0 K (x * (↑L + ↑K * M)) (t - t0) :=
       Filter.eventually_of_mem self_mem_nhdsWithin fun x (hx : (0 : ℝ) < x) =>
-        euler_error_bound v x hx t0 y0 K L M hv hv_t v_bound T sol sol_cont sol_deriv sol_init t ht
+        euler_error_bound v x hx t0 y0 K L M hv hv_t v_bound sol sol_cont sol_deriv sol_init t ht
     exact tendsto_iff_dist_tendsto_zero.mpr (squeeze_zero_norm' (by simpa using h_bound)
       h_gronwall_zero)
