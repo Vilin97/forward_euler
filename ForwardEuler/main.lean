@@ -8,11 +8,6 @@ Definitions:
 - `eulerDeriv`: The right derivative of the Euler path.
 
 Theorems:
-- `eulerPath_grid_point`: The Euler path coincides with the Euler points at grid points.
-- `eulerPath_continuous`: The Euler path is continuous.
-- `eulerPath_hasDerivWithinAt`: The Euler path has the expected right derivative.
-- `eulerPath_eq_on_Ico`: Explicit formula for the Euler path on intervals.
-- `eulerDeriv_eq_on_Ico`: Explicit formula for the Euler derivative on intervals.
 - `euler_derivative_global_bound`: Global bound on the difference between the Euler derivative and the vector field.
 - `euler_error_bound`: Error bound for the Euler method using Gronwall's inequality.
 - `euler_convergence`: The Euler method converges to the true solution as the step size goes to zero.
@@ -21,6 +16,8 @@ Theorems:
 import Mathlib.Analysis.ODE.Gronwall
 
 set_option linter.mathlibStandardSet false
+
+/-! ## Grid helpers -/
 
 private theorem floor_eq_of_mem_Ico {h : ℝ} (h_pos : 0 < h) {a : ℝ} {n : ℕ} {t : ℝ}
     (ht : t ∈ Set.Ico (a + n * h) (a + (n + 1) * h)) :
@@ -33,104 +30,123 @@ private theorem mem_Ico_floor {h : ℝ} (h_pos : 0 < h) {a t : ℝ} (ht : a ≤ 
   by constructor <;> nlinarith [Nat.floor_le (div_nonneg (sub_nonneg.mpr ht) h_pos.le),
       Nat.lt_floor_add_one ((t - a) / h), mul_div_cancel₀ (t - a) h_pos.ne']
 
+/-- The regular grid of closed intervals `[a + n*h, a + (n+1)*h]` is locally finite. -/
+theorem locallyFinite_Icc_grid {h : ℝ} (h_pos : 0 < h) (a : ℝ) :
+    LocallyFinite fun n : ℕ => Set.Icc (a + n * h) (a + (↑n + 1) * h) := by
+  intro x; refine ⟨Set.Ioo (x - h) (x + h), Ioo_mem_nhds (by linarith) (by linarith),
+    (Set.finite_Icc (⌊(x - h - a) / h⌋₊) (⌈(x + h - a) / h⌉₊)).subset ?_⟩
+  rintro n ⟨z, ⟨hz1, hz2⟩, hz3, hz4⟩
+  refine ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by linarith)).mpr ?_),
+         Nat.cast_le.mp ((?_ : (n : ℝ) ≤ _).trans (Nat.le_ceil _))⟩ <;>
+  (first | rw [div_lt_iff₀ h_pos] | rw [le_div_iff₀ h_pos]) <;> grind
+
 /-- A function continuous on each cell `[a + n*h, a + (n+1)*h]` is continuous on `[a, ∞)`. -/
 theorem continuousOn_Ici_of_Icc_grid {E : Type*} [TopologicalSpace E] {f : ℝ → E}
     {h : ℝ} (h_pos : 0 < h) {a : ℝ}
     (hf : ∀ n : ℕ, ContinuousOn f (Set.Icc (a + n * h) (a + (n + 1) * h))) :
-    ContinuousOn f (Set.Ici a) := by
-  have h_lf : LocallyFinite fun n : ℕ => Set.Icc (a + n * h) (a + (↑n + 1) * h) := by
-    intro x; refine ⟨Set.Ioo (x - h) (x + h), Ioo_mem_nhds (by linarith) (by linarith),
-      (Set.finite_Icc (⌊(x - h - a) / h⌋₊) (⌈(x + h - a) / h⌉₊)).subset ?_⟩
-    rintro n ⟨z, ⟨hz1, hz2⟩, hz3, hz4⟩
-    refine ⟨Nat.lt_add_one_iff.mp ((Nat.floor_lt' (by linarith)).mpr ?_),
-           Nat.cast_le.mp ((?_ : (n : ℝ) ≤ _).trans (Nat.le_ceil _))⟩ <;>
-    (first | rw [div_lt_iff₀ h_pos] | rw [le_div_iff₀ h_pos]) <;> grind
-  exact (h_lf.continuousOn_iUnion (fun n => isClosed_Icc) (hf ·)).mono fun t (ht : a ≤ t) =>
-    Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_floor h_pos ht)⟩
+    ContinuousOn f (Set.Ici a) :=
+  ((locallyFinite_Icc_grid h_pos a).continuousOn_iUnion (fun _ => isClosed_Icc) (hf ·)).mono
+    fun t (ht : a ≤ t) => Set.mem_iUnion.mpr ⟨_, Set.Ico_subset_Icc_self (mem_Ico_floor h_pos ht)⟩
 
-/--
-The Euler step for an ODE y' = v(t, y) with step size h is y_{n+1} = y_n + h * v(t_n, y_n).
--/
-def eulerStep {𝕜 : Type*} {E : Type*} [Ring 𝕜] [AddCommGroup E] [Module 𝕜 E] (v : 𝕜 → E → E) (h : 𝕜) (t : 𝕜) (y : E) : E :=
+/-! ## Piecewise linear interpolation -/
+
+/-- The piecewise linear interpolation of a sequence `y` with slopes `c` on a regular grid
+with step size `h` starting at `a`. On `[a + n*h, a + (n+1)*h)`, the value is
+`y n + (t - (a + n*h)) • c n`. -/
+noncomputable def piecewiseLinear {E : Type*} [AddCommGroup E] [Module ℝ E]
+    (y : ℕ → E) (c : ℕ → E) (h : ℝ) (a : ℝ) (t : ℝ) : E :=
+  let n := ⌊(t - a) / h⌋₊
+  y n + (t - (a + n * h)) • c n
+
+/-- The piecewise constant function taking value `c n` on `[a + n*h, a + (n+1)*h)`. -/
+noncomputable def piecewiseConst {E : Type*} (c : ℕ → E) (h : ℝ) (a : ℝ) (t : ℝ) : E :=
+  c ⌊(t - a) / h⌋₊
+
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  {y : ℕ → E} {c : ℕ → E} {h : ℝ} {a : ℝ}
+
+theorem piecewiseLinear_grid_point (h_pos : 0 < h) (a : ℝ) (n : ℕ) :
+    piecewiseLinear y c h a (a + n * h) = y n := by
+  simp [piecewiseLinear, h_pos.ne']
+
+theorem piecewiseLinear_eq_on_Ico (h_pos : 0 < h) {n : ℕ} {t : ℝ}
+    (ht : t ∈ Set.Ico (a + n * h) (a + (n + 1) * h)) :
+    piecewiseLinear y c h a t = y n + (t - (a + n * h)) • c n := by
+  simp [piecewiseLinear, floor_eq_of_mem_Ico h_pos ht]
+
+omit [NormedAddCommGroup E] [NormedSpace ℝ E] in
+theorem piecewiseConst_eq_on_Ico (h_pos : 0 < h) {n : ℕ} {t : ℝ}
+    (ht : t ∈ Set.Ico (a + n * h) (a + (n + 1) * h)) :
+    piecewiseConst c h a t = c n := by
+  simp [piecewiseConst, floor_eq_of_mem_Ico h_pos ht]
+
+/-- A piecewise linear function with matching grid values is continuous on `[a, ∞)`. -/
+theorem piecewiseLinear_continuous (h_pos : 0 < h)
+    (h_step : ∀ n, y (n + 1) = y n + h • c n) :
+    ContinuousOn (piecewiseLinear y c h a) (Set.Ici a) := by
+  apply continuousOn_Ici_of_Icc_grid h_pos; intro n
+  apply (show ContinuousOn (fun t => y n + (t - (a + n * h)) • c n) _ by fun_prop).congr
+  intro t ht; rcases eq_or_lt_of_le ht.2 with rfl | h_lt
+  · norm_cast; rw [piecewiseLinear_grid_point h_pos a (n + 1), h_step]; module
+  · exact piecewiseLinear_eq_on_Ico h_pos ⟨ht.1, h_lt⟩
+
+/-- The right derivative of a piecewise linear function is the piecewise constant slope. -/
+theorem piecewiseLinear_hasDerivWithinAt (h_pos : 0 < h) {t : ℝ} (ht : a ≤ t) :
+    HasDerivWithinAt (piecewiseLinear y c h a) (piecewiseConst c h a t) (Set.Ici t) t := by
+  set n := ⌊(t - a) / h⌋₊; set tn := a + n * h
+  obtain ⟨h1, h2⟩ := mem_Ico_floor h_pos ht; simp only [piecewiseConst]
+  exact hasDerivWithinAt_Ioi_iff_Ici.mp (((hasDerivAt_id t |>.sub_const tn |>.smul_const (c n)
+    |>.const_add (y n)).hasDerivWithinAt.congr_of_eventuallyEq (by
+      filter_upwards [Ioo_mem_nhdsGT h2] with x hx
+      exact piecewiseLinear_eq_on_Ico h_pos ⟨h1.trans hx.1.le, hx.2⟩)
+    (by simp [piecewiseLinear, n, tn])).congr_deriv (one_smul _ _))
+
+/-! ## Euler method -/
+
+def eulerStep {𝕜 : Type*} {E : Type*} [Ring 𝕜] [AddCommGroup E] [Module 𝕜 E]
+    (v : 𝕜 → E → E) (h : 𝕜) (t : 𝕜) (y : E) : E :=
   y + h • v t y
 
-/--
-The n-th point in the Euler method approximation with step size h.
--/
-def eulerPoint {𝕜 : Type*} {E : Type*} [Ring 𝕜] [AddCommGroup E] [Module 𝕜 E] (v : 𝕜 → E → E) (h : 𝕜) (t0 : 𝕜) (y0 : E) : ℕ → E
+def eulerPoint {𝕜 : Type*} {E : Type*} [Ring 𝕜] [AddCommGroup E] [Module 𝕜 E]
+    (v : 𝕜 → E → E) (h : 𝕜) (t0 : 𝕜) (y0 : E) : ℕ → E
 | 0 => y0
 | n + 1 => eulerStep v h (t0 + n * h) (eulerPoint v h t0 y0 n)
 
-/--
-The piecewise linear path interpolating the Euler method points.
--/
-noncomputable def eulerPath {𝕜 : Type*} {E : Type*} [Field 𝕜] [PartialOrder 𝕜] [FloorSemiring 𝕜]
-    [AddCommGroup E] [Module 𝕜 E]
-  (v : 𝕜 → E → E) (h : 𝕜) (t0 : 𝕜) (y0 : E) (t : 𝕜) : E :=
-  let n := Nat.floor ((t - t0) / h)
-  let tn := t0 + n * h
-  let yn := eulerPoint v h t0 y0 n
-  yn + (t - tn) • v tn yn
-
-/--
-The derivative of the Euler path (defined as the right derivative everywhere).
--/
-noncomputable def eulerDeriv {𝕜 : Type*} {E : Type*} [Field 𝕜] [PartialOrder 𝕜] [FloorSemiring 𝕜]
-    [AddCommGroup E] [Module 𝕜 E]
-  (v : 𝕜 → E → E) (h : 𝕜) (t0 : 𝕜) (y0 : E) (t : 𝕜) : E :=
-  let n := Nat.floor ((t - t0) / h)
+/-- The slope of the Euler method on the n-th cell. -/
+noncomputable def eulerSlope (v : ℝ → E → E) (h : ℝ) (t0 : ℝ) (y0 : E) (n : ℕ) : E :=
   v (t0 + n * h) (eulerPoint v h t0 y0 n)
 
-variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  (v : ℝ → E → E) {h : ℝ} {t0 : ℝ} {y0 : E}
+/-- The piecewise linear Euler path. -/
+noncomputable def eulerPath (v : ℝ → E → E) (h : ℝ) (t0 : ℝ) (y0 : E) : ℝ → E :=
+  piecewiseLinear (eulerPoint v h t0 y0) (eulerSlope v h t0 y0) h t0
 
-/-
-The Euler path coincides with the Euler points at the grid points.
--/
-theorem eulerPath_grid_point (h_pos : 0 < h) (t0 : ℝ) (y0 : E) (n : ℕ) :
-    eulerPath v h t0 y0 (t0 + n * h) = eulerPoint v h t0 y0 n := by
-  simp [eulerPath, h_pos.ne']
+/-- The right derivative of the Euler path. -/
+noncomputable def eulerDeriv (v : ℝ → E → E) (h : ℝ) (t0 : ℝ) (y0 : E) : ℝ → E :=
+  piecewiseConst (eulerSlope v h t0 y0) h t0
 
-/-
-On the interval [t_n, t_{n+1}), the Euler path is given by the affine function starting at y_n
-with slope v(t_n, y_n).
--/
+variable (v : ℝ → E → E) {h : ℝ} {t0 : ℝ} {y0 : E}
+
+private theorem eulerStep_eq (n : ℕ) :
+    eulerPoint v h t0 y0 (n + 1) = eulerPoint v h t0 y0 n + h • eulerSlope v h t0 y0 n := by
+  simp [eulerPoint, eulerStep, eulerSlope]
+
+theorem eulerPath_continuous (h_pos : 0 < h) :
+    ContinuousOn (eulerPath v h t0 y0) (Set.Ici t0) :=
+  piecewiseLinear_continuous h_pos (eulerStep_eq v)
+
+theorem eulerPath_hasDerivWithinAt (h_pos : 0 < h) {t : ℝ} (ht : t0 ≤ t) :
+    HasDerivWithinAt (eulerPath v h t0 y0) (eulerDeriv v h t0 y0 t) (Set.Ici t) t :=
+  piecewiseLinear_hasDerivWithinAt h_pos ht
+
 theorem eulerPath_eq_on_Ico (h_pos : 0 < h) {n : ℕ} {t : ℝ}
     (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
-    eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-  simp [eulerPath, floor_eq_of_mem_Ico h_pos ht]
+    eulerPath v h t0 y0 t = eulerPoint v h t0 y0 n + (t - (t0 + n * h)) • eulerSlope v h t0 y0 n :=
+  piecewiseLinear_eq_on_Ico h_pos ht
 
-/-
-On the interval [t_n, t_{n+1}), the Euler derivative is constant and equal to v(t_n, y_n).
--/
 theorem eulerDeriv_eq_on_Ico (h_pos : 0 < h) {n : ℕ} {t : ℝ}
     (ht : t ∈ Set.Ico (t0 + n * h) (t0 + (n + 1) * h)) :
-    eulerDeriv v h t0 y0 t = v (t0 + n * h) (eulerPoint v h t0 y0 n) := by
-  simp [eulerDeriv, floor_eq_of_mem_Ico h_pos ht]
-
-/-
-The Euler path is continuous on [t0, ∞).
--/
-theorem eulerPath_continuous (h_pos : 0 < h) : ContinuousOn (eulerPath v h t0 y0) (Set.Ici t0) := by
-  apply continuousOn_Ici_of_Icc_grid h_pos; intro n
-  apply (show ContinuousOn (fun t => eulerPoint v h t0 y0 n +
-    (t - (t0 + n * h)) • v (t0 + n * h) (eulerPoint v h t0 y0 n)) _ by fun_prop).congr
-  intro t ht; rcases eq_or_lt_of_le ht.2 with rfl | h_lt
-  · norm_cast; rw [eulerPath_grid_point v h_pos t0 y0 (n + 1)]; simp [eulerStep, eulerPoint]; module
-  · simp [eulerPath, floor_eq_of_mem_Ico h_pos ⟨ht.1, h_lt⟩]
-
-/-
-The Euler path has the expected right derivative everywhere.
--/
-theorem eulerPath_hasDerivWithinAt (h_pos : 0 < h) {t : ℝ} (ht : t0 ≤ t) :
-    HasDerivWithinAt (eulerPath v h t0 y0) (eulerDeriv v h t0 y0 t) (Set.Ici t) t := by
-  set n := ⌊(t - t0) / h⌋₊; set tn := t0 + n * h; set yn := eulerPoint v h t0 y0 n; set c := v tn yn
-  obtain ⟨h1, h2⟩ := mem_Ico_floor h_pos ht; simp only [eulerDeriv]
-  exact hasDerivWithinAt_Ioi_iff_Ici.mp (((hasDerivAt_id t |>.sub_const tn |>.smul_const c
-    |>.const_add yn).hasDerivWithinAt.congr_of_eventuallyEq (by
-      filter_upwards [Ioo_mem_nhdsGT h2] with x hx
-      exact eulerPath_eq_on_Ico v h_pos ⟨h1.trans hx.1.le, hx.2⟩)
-    (by simp [eulerPath, n, tn, yn, c])).congr_deriv (one_smul _ _))
+    eulerDeriv v h t0 y0 t = eulerSlope v h t0 y0 n :=
+  piecewiseConst_eq_on_Ico h_pos ht
 
 variable {v} {K L : NNReal} {M : ℝ}
   (hv : ∀ t, LipschitzWith K (v t)) (hv_t : ∀ y, LipschitzWith L (fun t => v t y))
@@ -147,11 +163,11 @@ theorem euler_derivative_global_bound (h_pos : 0 < h) {t : ℝ} (ht : t0 ≤ t) 
     le_trans ((hv_t _).dist_le_mul _ _) (by rw [dist_eq_norm, Real.norm_of_nonpos (by grind)]; grind)
   have h2 : dist (eulerPoint v h t0 y0 n) (eulerPath v h t0 y0 t) ≤ h * M := by
     rw [eulerPath_eq_on_Ico v h_pos ⟨ht1, ht2⟩, dist_eq_norm]
-    simp +decide [norm_smul, abs_of_nonneg (sub_nonneg.2 ht1)]
+    simp +decide [norm_smul, abs_of_nonneg (sub_nonneg.2 ht1), eulerSlope]
     refine mul_le_mul ?_ (v_bound _ _) ?_ ?_ <;> grind
   calc dist (eulerDeriv v h t0 y0 t) (v t (eulerPath v h t0 y0 t))
       = dist (v (t0 + n * h) (eulerPoint v h t0 y0 n)) (v t (eulerPath v h t0 y0 t)) := by
-        rw [eulerDeriv_eq_on_Ico v h_pos ⟨ht1, ht2⟩]
+        rw [eulerDeriv_eq_on_Ico v h_pos ⟨ht1, ht2⟩]; rfl
     _ ≤ L * (t - (t0 + n * h)) + K * (h * M) :=
         (dist_triangle _ _ _).trans (add_le_add h1 (((hv t).dist_le_mul _ _).trans (by gcongr)))
     _ ≤ h * (L + K * M) := by
@@ -167,12 +183,12 @@ theorem euler_error_bound (h_pos : 0 < h) {T : ℝ}
     ∀ t ∈ Set.Icc t0 T, dist (eulerPath v h t0 y0 t) (sol t) ≤ gronwallBound 0 K (h * (L + K * M)) (t - t0) := by
   intro t ht
   have := dist_le_of_approx_trajectories_ODE (δ := 0) (εg := 0)
-    (f' := fun t => eulerDeriv v h t0 y0 t) (g' := fun t => v t (sol t)) hv
+    (f' := eulerDeriv v h t0 y0) (g' := fun t => v t (sol t)) hv
     ((eulerPath_continuous v h_pos).mono Set.Icc_subset_Ici_self)
     (fun t ht => eulerPath_hasDerivWithinAt v h_pos ht.1)
     (fun t ht => euler_derivative_global_bound hv hv_t v_bound h_pos ht.1)
     sol_cont sol_deriv (fun _ _ => (dist_self _).le)
-    (by simp [eulerPath, eulerPoint, sol_init]) t ht
+    (by simp [eulerPath, piecewiseLinear, eulerPoint, sol_init]) t ht
   grind
 
 /-
