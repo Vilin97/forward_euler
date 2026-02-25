@@ -55,9 +55,7 @@ noncomputable def eulerDeriv {𝕜 : Type*} {E : Type*} [Field 𝕜] [PartialOrd
     [AddCommGroup E] [Module 𝕜 E]
   (v : 𝕜 → E → E) (h : 𝕜) (t0 : 𝕜) (y0 : E) (t : 𝕜) : E :=
   let n := Nat.floor ((t - t0) / h)
-  let tn := t0 + n * h
-  let yn := eulerPoint v h t0 y0 n
-  v tn yn
+  v (t0 + n * h) (eulerPoint v h t0 y0 n)
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -106,9 +104,8 @@ private theorem eulerPath_continuousOn_Icc (v : ℝ → E → E) {h : ℝ} (h_po
       (by fun_prop : ContinuousOn f _).congr h_eq
     intro t ht
     rcases eq_or_lt_of_le ht.2 with rfl | h_lt
-    · show _ = f _; simp only [f]
-      rw [show (↑n + 1 : ℝ) = ↑(n + 1) from by grind, eulerPath_grid_point v h_pos t0 y0 (n + 1)]
-      simp [eulerStep, eulerPoint]; module
+    · show _ = f _; simp only [f]; norm_cast
+      rw [eulerPath_grid_point v h_pos t0 y0 (n + 1)]; simp [eulerStep, eulerPoint]; module
     · simp only [f, eulerPath, floor_eq_of_mem_Ico h_pos ⟨ht.1, h_lt⟩]
 
 /-
@@ -195,13 +192,12 @@ theorem euler_error_bound {T : ℝ}
   ∀ t ∈ Set.Icc t0 T, dist (eulerPath v h t0 y0 t) (sol t) ≤ gronwallBound 0 K (h * (L + K * M)) (t - t0) := by
     intro t ht
     have := dist_le_of_approx_trajectories_ODE (δ := 0) (εg := 0)
-      (f' := fun t => eulerDeriv v h t0 y0 t) (g' := fun t => v t (sol t))
-      hv ((eulerPath_continuous v h_pos t0 y0).mono Set.Icc_subset_Ici_self)
+      (f' := fun t => eulerDeriv v h t0 y0 t) (g' := fun t => v t (sol t)) hv
+      ((eulerPath_continuous v h_pos t0 y0).mono Set.Icc_subset_Ici_self)
       (fun t ht => eulerPath_hasDerivWithinAt v h_pos y0 ht.1)
       (fun t ht => euler_derivative_global_bound v h h_pos t0 y0 K L M hv hv_t v_bound ht.1)
       sol_cont sol_deriv (fun _ _ => (dist_self _).le)
-      (by simp [eulerPath, eulerPoint, sol_init])
-      t ht
+      (by simp [eulerPath, eulerPoint, sol_init]) t ht
     grind
 
 end EulerBounds
@@ -218,14 +214,9 @@ theorem euler_convergence (v : ℝ → E → E) (t0 : ℝ) (y0 : E) {T : ℝ}
   (sol_init : sol t0 = y0) :
   ∀ t ∈ Set.Icc t0 T, Filter.Tendsto (fun h => eulerPath v h t0 y0 t) (nhdsWithin 0 (Set.Ioi 0)) (nhds (sol t)) := by
     intro t ht
-    have h_gronwall_zero : Filter.Tendsto (fun h => gronwallBound 0 K (h * (↑L + ↑K * M)) (t - t0))
-        (nhdsWithin 0 (Set.Ioi 0)) (nhds 0) :=
-      tendsto_nhdsWithin_of_tendsto_nhds <|
+    exact tendsto_iff_dist_tendsto_zero.mpr (squeeze_zero_norm'
+      (by simpa using Filter.eventually_of_mem self_mem_nhdsWithin fun x (hx : (0 : ℝ) < x) =>
+        euler_error_bound v x hx t0 y0 K L M hv hv_t v_bound sol sol_cont sol_deriv sol_init t ht)
+      (tendsto_nhdsWithin_of_tendsto_nhds <|
         Continuous.tendsto' ((gronwallBound_continuous_ε 0 K (t - t0)).comp
-          (continuous_id.mul continuous_const)) 0 0 (by grind [gronwallBound_ε0_δ0])
-    have h_bound : ∀ᶠ x in nhdsWithin 0 (Set.Ioi 0),
-        dist (eulerPath v x t0 y0 t) (sol t) ≤ gronwallBound 0 K (x * (↑L + ↑K * M)) (t - t0) :=
-      Filter.eventually_of_mem self_mem_nhdsWithin fun x (hx : (0 : ℝ) < x) =>
-        euler_error_bound v x hx t0 y0 K L M hv hv_t v_bound sol sol_cont sol_deriv sol_init t ht
-    exact tendsto_iff_dist_tendsto_zero.mpr (squeeze_zero_norm' (by simpa using h_bound)
-      h_gronwall_zero)
+          (continuous_id.mul continuous_const)) 0 0 (by grind [gronwallBound_ε0_δ0])))
